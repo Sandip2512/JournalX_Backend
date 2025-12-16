@@ -1,0 +1,106 @@
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from pymongo.database import Database
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
+
+from app.mongo_database import get_db
+from app.crud.user_crud import login_user
+from app.schemas.user_schema import UserLogin, UserResponse
+
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+
+router = APIRouter()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Database = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+            
+        user = db.users.find_one({"email": email})
+        if user is None:
+             raise HTTPException(status_code=401, detail="User not found")
+             
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+@router.post("/login")
+def login(user_login: UserLogin, request: Request, background_tasks: BackgroundTasks, db: Database = Depends(get_db)):
+    client_ip = request.client.host
+    
+    try:
+        print(f"🔐 Login attempt for email: {user_login.email}")
+        
+        # login_user returns a dict or None (since migrated)
+        db_user = login_user(db, user_login.email, user_login.password)
+        
+        if not db_user:
+            print("❌ Login failed: Invalid credentials or user not found")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        # Record success in background
+        background_tasks.add_task(log_login_history, db_user["user_id"], client_ip, "success", db)
+
+        print(f"✅ Login successful!")
+        
+        access_token = create_access_token(
+            data={
+                "sub": db_user["email"], 
+                "user_id": db_user["user_id"],
+                "role": db_user.get("role", "user") 
+            },
+            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+
+        # Ensure _id is handled if present (Pydantic can ignore it if extra="ignore", but safer to use schema safely)
+        # UserResponse expects fields. db_user is a dict.
+        user_data = UserResponse(**db_user)
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user_data
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Login error: {str(e)}")
+        # import traceback
+        # traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+def log_login_history(user_id: str, ip_address: str, status: str, db: Database):
+    try:
+        # We can use the passed 'db' object because in PyMongo it's thread-safe / pool-based usually.
+        # However, BackgroundTasks might run after request context is gone. 
+        # But 'db' from dependency is usually a client.get_database(), which is persistent in pymongo client.
+        # But let's be safe and grab a fresh reference if needed, but for pymongo passing it is usually fine 
+        # unlike SQLAlchemy session which is scoped.
+        # Actually, `get_db` yields `db_client.db`. It's a single object for the app lifespan (singleton style in mongo_database.py). 
+        # So it is safe to reuse.
+        
+        log = {
+            "user_id": user_id,
+            "ip_address": ip_address,
+            "status": status,
+            "timestamp": datetime.now()
+        }
+        db.login_history.insert_one(log)
+    except Exception as e:
+        print(f"⚠️ Failed to log login history: {e}")

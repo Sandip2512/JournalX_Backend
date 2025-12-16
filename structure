@@ -1,0 +1,21 @@
+trading_journal_app/
+│
+├─ app/
+│   ├─ __init__.py
+│   ├─ main.py               # FastAPI app entry point
+│   ├─ database.py           # Database connection
+│   ├─ models/
+│   │    ├─ __init__.py
+│   │    └─ trade.py         # SQLAlchemy trade model
+│   ├─ schemas/
+│   │    ├─ __init__.py
+│   │    └─ trade_schema.py  # Pydantic schemas
+│   ├─ crud/
+│   │    ├─ __init__.py
+│   │    └─ trade_crud.py    # CRUD operations
+│   └─ services/
+│        ├─ __init__.py
+│        └─ mt5_service.py   # MT5 fetching logic
+│
+├─ .env                     # Environment variables
+├─ requirements.txt
