@@ -36,6 +36,7 @@ app = FastAPI(title="Forex Trading Journal Backend")
 
 # ----------------- CORS SETUP -----------------
 # Include all possible origins including network IP if used
+# Include specific origins for localhost
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -44,15 +45,12 @@ origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://192.168.1.3:8080",
-    "https://journal-x-frontend.vercel.app",
-    "https://journalx-trading.vercel.app",
-    "https://journal-x-frontend-git-main-sandip2512s-projects.vercel.app",
-    "https://*.vercel.app"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
