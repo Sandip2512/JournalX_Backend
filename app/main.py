@@ -246,6 +246,8 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"]
 app.include_router(announcements.router, prefix="/api/announcements", tags=["announcements"])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"])
 app.include_router(goals.router, prefix="/api/goals", tags=["Goals"])
+from app.routes import users
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 
 # ----------------- User Endpoints -----------------
 @app.post("/register", response_model=UserResponse)

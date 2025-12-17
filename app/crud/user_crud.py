@@ -79,6 +79,42 @@ def update_password(db: Database, email: str, new_password: str):
         return get_user_by_email(db, email)
     return None
 
+def update_user_profile(db: Database, user_id: str, update_data: dict):
+    """Update user profile fields"""
+    # Filter out None values to avoid overwriting with null
+    fields_to_update = {k: v for k, v in update_data.items() if v is not None}
+    
+    if not fields_to_update:
+        return get_user_by_id(db, user_id)
+        
+    result = db.users.update_one(
+        {"user_id": user_id},
+        {"$set": fields_to_update}
+    )
+    
+    if result.acknowledged:
+        return get_user_by_id(db, user_id)
+    return None
+
+def change_password(db: Database, user_id: str, current_password: str, new_password: str) -> bool:
+    """Change user password after verifying current password"""
+    user = get_user_by_id(db, user_id)
+    if not user:
+        return False
+    
+    # Verify current password
+    if not verify_password(current_password, user["password"]):
+        return False
+    
+    # Update with new password
+    hashed_pw = get_password_hash(new_password)
+    result = db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"password": hashed_pw}}
+    )
+    
+    return result.modified_count > 0
+
 # ------------------- Password Reset -------------------
 password_reset_tokens = {}
 
