@@ -58,6 +58,10 @@ app.add_middleware(
 )
 
 
+@app.get("/version")
+def get_version():
+    return {"version": "v3-regex-cors", "timestamp": "2025-12-17T05:45:00"}
+
 # Exception handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
