@@ -12,3 +12,5 @@ numpy
 sendgrid
 requests
 reportlab
+matplotlib
+Pillow
