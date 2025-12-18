@@ -234,7 +234,7 @@ def debug_mt5_credentials(user_id: str, db: Database = Depends(get_db)):
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 
 # ----------------- MT5 Routes -----------------
-from app.routes import auth, admin, admin_users, admin_trades, admin_system, admin_analytics, announcements, analytics
+from app.routes import auth, admin, admin_users, admin_trades, admin_system, admin_analytics, announcements, analytics, subscription, reports
 
 app.include_router(mt5.router, prefix="/mt5", tags=["MT5"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
@@ -246,6 +246,8 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"]
 app.include_router(announcements.router, prefix="/api/announcements", tags=["announcements"])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"])
 app.include_router(goals.router, prefix="/api/goals", tags=["Goals"])
+app.include_router(subscription.router, prefix="/api/subscriptions", tags=["Subscriptions"])
+app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 from app.routes import users
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 

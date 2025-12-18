@@ -4,11 +4,16 @@ from jose import JWTError, jwt
 from pymongo.database import Database
 from datetime import datetime, timedelta
 import os
+import logging
 from dotenv import load_dotenv
 
 from app.mongo_database import get_db
 from app.crud.user_crud import login_user
 from app.schemas.user_schema import UserLogin, UserResponse
+
+# Set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret")
@@ -24,15 +29,25 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Database = Depends
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
+            logger.warning("🚫 Token missing 'sub' claim")
             raise HTTPException(status_code=401, detail="Invalid token")
             
-        user = db.users.find_one({"email": email})
+        # Use a timeout to avoid hangs
+        user = db.users.find_one({"email": email}, max_time_ms=2000)
         if user is None:
+             logger.warning(f"🚫 User not found for email: {email}")
              raise HTTPException(status_code=401, detail="User not found")
              
         return user
     except JWTError:
+        logger.warning("🚫 JWT validation failed")
         raise HTTPException(status_code=401, detail="Could not validate credentials")
+    except Exception as e:
+        logger.error(f"❌ Error in get_current_user: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal auth error")
+
+# Alias for compatibility with some routes
+get_current_user_role = get_current_user
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()

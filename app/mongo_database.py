@@ -13,23 +13,23 @@ class MongoDB:
     db = None
 
     def connect(self):
+        if self.client is not None:
+            return
+
         mongo_uri = os.getenv("MONGO_URI")
         if not mongo_uri:
             logger.error("MONGO_URI not found in environment variables")
             raise ValueError("MONGO_URI not set")
 
         try:
-            self.client = MongoClient(mongo_uri)
-            # The 'get_database' method is better than attribute access for creating/getting db
-            # Assuming the URI might have the db name, or we use a default
+            # Add serverSelectionTimeoutMS to avoid long hangs
+            self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
             db_name = os.getenv("DB_NAME", "JournalX") 
-            # If URI has db name, pymongo might use it, but explicit is safer if needed.
-            # However, typically Atlas URI allows .../dbname?params
             self.db = self.client.get_database(db_name)
             
             # Verify connection
             self.client.admin.command('ping')
-            logger.info("✅ Connected to MongoDB Atlas")
+            logger.info(f"✅ Connected to MongoDB Atlas (DB: {db_name})")
             
         except ConnectionFailure as e:
             logger.error(f"❌ Could not connect to MongoDB: {e}")
