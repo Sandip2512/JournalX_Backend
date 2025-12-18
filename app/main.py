@@ -58,9 +58,6 @@ app.add_middleware(
 )
 
 
-@app.get("/version")
-def get_version():
-    return {"version": "v4-report-cleanup", "timestamp": "2025-12-19T04:15:00"}
 
 # Exception handlers
 @app.exception_handler(Exception)

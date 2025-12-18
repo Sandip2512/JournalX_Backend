@@ -18,10 +18,6 @@ router = APIRouter()
 
 pdf_service = PDFReportService()
 
-@router.get("/test-router")
-def test_router():
-    return {"status": "Reports router is active", "time": datetime.now()}
-
 def run_report_generation(user_id: str, user_name: str, report_type: str, report_id: str, start_date: datetime, end_date: datetime, db: Database):
     """Background task to generate report."""
     reports_coll = db.get_collection("reports")
