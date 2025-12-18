@@ -243,6 +243,8 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"]
 app.include_router(announcements.router, prefix="/api/announcements", tags=["announcements"])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"])
 app.include_router(goals.router, prefix="/api/goals", tags=["Goals"])
+from app.routes import discipline
+app.include_router(discipline.router, prefix="/api/discipline", tags=["Discipline"])
 app.include_router(subscription.router, prefix="/api/subscriptions", tags=["Subscriptions"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 from app.routes import users
