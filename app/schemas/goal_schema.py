@@ -15,10 +15,10 @@ class GoalUpdate(GoalBase):
     pass
 
 class GoalResponse(GoalBase):
-    id: int
+    id: Optional[str] = None
     user_id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
