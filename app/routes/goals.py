@@ -3,6 +3,7 @@ from pymongo.database import Database
 from app.mongo_database import get_db
 from app.schemas.goal_schema import GoalCreate, GoalUpdate, GoalResponse
 from typing import Optional
+from datetime import datetime
 
 router = APIRouter(
     prefix="/goals",
