@@ -18,6 +18,10 @@ router = APIRouter()
 
 pdf_service = PDFReportService()
 
+@router.get("/test-router")
+def test_router():
+    return {"status": "Reports router is active", "time": datetime.now()}
+
 def run_report_generation(user_id: str, user_name: str, report_type: str, report_id: str, start_date: datetime, end_date: datetime, db: Database):
     """Background task to generate report."""
     reports_coll = db.get_collection("reports")
@@ -181,3 +185,43 @@ def download_report(
         media_type="application/pdf", 
         filename=report["filename"]
     )
+
+@router.delete("/{report_id}")
+def delete_report(
+    report_id: str,
+    db: Database = Depends(get_db),
+    user: dict = Depends(get_current_user_role)
+):
+    logger.info(f"🗑️ Delete request for report {report_id} by user {user.get('user_id')}")
+    report = get_report(db, report_id)
+    if not report:
+        logger.warning(f"❌ Report {report_id} not found in database")
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    logger.info(f"📄 Found report: user_id={report.get('user_id')}, current_user_id={user.get('user_id')}")
+    if str(report.get("user_id")) != str(user.get("user_id")):
+        logger.warning(f"🚫 Unauthorized delete attempt: report owned by {report.get('user_id')}")
+        raise HTTPException(status_code=403, detail="Unauthorized to delete this report")
+
+    # 1. Delete File if exists
+    if report.get("filename"):
+        file_path = os.path.join(pdf_service.reports_dir, report["filename"])
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"🗑️ Deleted physical report file: {report['filename']}")
+            else:
+                logger.warning(f"⚠️ Physical report file not found: {report['filename']}")
+        except Exception as e:
+            logger.error(f"❌ Error deleting report file: {e}")
+
+    # 2. Delete Metadata
+    from app.crud.report_crud import delete_report_metadata
+    success = delete_report_metadata(db, report_id)
+    
+    if not success:
+        logger.error(f"❌ Failed to delete metadata for report {report_id}")
+        raise HTTPException(status_code=500, detail="Failed to delete report metadata")
+        
+    logger.info(f"✅ Report {report_id} deleted successfully")
+    return {"message": "Report deleted successfully"}

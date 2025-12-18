@@ -60,7 +60,7 @@ app.add_middleware(
 
 @app.get("/version")
 def get_version():
-    return {"version": "v3-regex-cors", "timestamp": "2025-12-17T05:45:00"}
+    return {"version": "v4-report-cleanup", "timestamp": "2025-12-19T04:15:00"}
 
 # Exception handlers
 @app.exception_handler(Exception)

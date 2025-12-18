@@ -22,3 +22,7 @@ def get_user_reports(db: Database, user_id: str) -> List[dict]:
 
 def get_report(db: Database, report_id: str) -> Optional[dict]:
     return db.reports.find_one({"id": report_id})
+
+def delete_report_metadata(db: Database, report_id: str) -> bool:
+    result = db.reports.delete_one({"id": report_id})
+    return result.deleted_count > 0
