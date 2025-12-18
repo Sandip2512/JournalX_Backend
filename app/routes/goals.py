@@ -6,7 +6,6 @@ from typing import Optional
 from datetime import datetime
 
 router = APIRouter(
-    prefix="/goals",
     tags=["Goals"],
     responses={404: {"description": "Not found"}},
 )
@@ -16,13 +15,7 @@ def get_user_goal(user_id: str, db: Database = Depends(get_db)):
     """Get goals for a specific user"""
     goal = db.goals.find_one({"user_id": user_id})
     if not goal:
-        # Return default empty goal instead of 404 to simplify frontend
-        return {
-            "user_id": user_id, 
-            "monthly_profit_target": 0, 
-            "max_daily_loss": 0, 
-            "max_trades_per_day": 0
-        }
+        raise HTTPException(status_code=404, detail="No goals found for this user")
     return goal
 
 @router.post("/", response_model=GoalResponse)
