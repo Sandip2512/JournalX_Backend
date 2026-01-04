@@ -20,42 +20,22 @@ def get_user_goals(user_id: str, db: Database = Depends(get_db)):
         {"$set": {"is_active": True}}
     )
 
-    # Fix 2: Migrate legacy field names (weekly_profit_target -> target_amount)
-    # Also handle cases where target_amount is None or missing
+    # Fix 2: Migrate legacy field names & handle NULLs
     db.goals.update_many(
         {"user_id": user_id, "target_amount": None},
         {"$set": {"target_amount": 0.0}}
     )
 
-    legacy_query = {
-        "user_id": user_id,
-        "$and": [
-            {
-                "$or": [
-                    {"target_amount": {"$exists": False}}, 
-                    {"target_amount": 0.0},
-                    {"target_amount": None}
-                ]
-            },
-            {
-                "$or": [
-                    {"weekly_profit_target": {"$exists": True}}, 
-                    {"monthly_profit_target": {"$exists": True}}
-                ]
-            }
-        ]
-    }
-    
-    legacy = list(db.goals.find(legacy_query))
-    for lg in legacy:
-        # Prioritize legacy if target_amount is 0 or missing
-        target = lg.get("weekly_profit_target") or lg.get("monthly_profit_target") or 0.0
-        if target > 0:
-            g_type = "weekly" if lg.get("weekly_profit_target") else "monthly"
-            db.goals.update_one(
-                {"_id": lg["_id"]},
-                {"$set": {"target_amount": float(target), "goal_type": g_type, "is_active": True}}
-            )
+    # Fix 3: Ultra-Resilient Initialization
+    # If the user has active goals but EVERYTHING is $0, force a default to avoid broken UI
+    active_zeros = list(db.goals.find({"user_id": user_id, "is_active": True, "target_amount": {"$in": [0, 0.0, None]}}))
+    for az in active_zeros:
+        # Check if legacy content exists first
+        target = az.get("weekly_profit_target") or az.get("monthly_profit_target") or 0.0
+        if target == 0:
+            target = 500.0 if az.get("goal_type") == "weekly" else 2000.0
+        
+        db.goals.update_one({"_id": az["_id"]}, {"$set": {"target_amount": float(target)}})
 
     # --- FINAL FETCH ---
     goals = list(db.goals.find({"user_id": user_id, "is_active": True}))
