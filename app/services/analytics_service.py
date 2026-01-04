@@ -105,10 +105,14 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     # Filter trades for current week & year
     # Note: open_time is datetime object in Mongo
     
-    # Helper to check if date in current week
+    # Helper    # Calculate current week start (Sunday)
+    curr_week_start = now - timedelta(days=(now.weekday() + 1) % 7)
+    curr_week_start = curr_week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+
     def is_current_week(dt):
         if not dt: return False
-        return dt.isocalendar()[1] == current_week and dt.year == current_year
+        # Normalize dt to date for comparison or check if it's after curr_week_start
+        return dt >= curr_week_start
 
     def is_current_month(dt):
         if not dt: return False
@@ -165,7 +169,6 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
                     {"_id": goal["_id"]},
                     {"$set": {
                         "achieved": True, 
-                        "is_active": False, 
                         "achieved_date": datetime.now(),
                         "final_amount": current_profit
                     }}
