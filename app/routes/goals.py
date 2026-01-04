@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 from app.mongo_database import get_db
 from app.schemas.goal_schema import GoalCreate, GoalUpdate, GoalResponse
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 router = APIRouter(
@@ -10,38 +10,60 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.get("/user/{user_id}", response_model=GoalResponse)
-def get_user_goal(user_id: str, db: Database = Depends(get_db)):
-    """Get goals for a specific user"""
-    goal = db.goals.find_one({"user_id": user_id})
-    if not goal:
-        raise HTTPException(status_code=404, detail="No goals found for this user")
-    return goal
+@router.get("/user/{user_id}", response_model=List[GoalResponse])
+def get_user_goals(user_id: str, db: Database = Depends(get_db)):
+    """Get all active goals for a specific user"""
+    goals = list(db.goals.find({"user_id": user_id, "is_active": True}))
+    # If no goals, return empty list instead of 404 to be friendlier
+    return goals
+
+@router.get("/user/{user_id}/achieved", response_model=List[GoalResponse])
+def get_achieved_goals(user_id: str, db: Database = Depends(get_db)):
+    """Get all achieved goals for a user"""
+    achieved_goals = list(db.goals.find({"user_id": user_id, "achieved": True}).sort("achieved_date", -1))
+    return achieved_goals
 
 @router.post("/", response_model=GoalResponse)
 def create_or_update_goal(goal_data: GoalCreate, user_id: str, db: Database = Depends(get_db)):
     """Create or update user goals"""
-    existing = db.goals.find_one({"user_id": user_id})
+    # Check for existing active goal of THIS TYPE
+    existing = db.goals.find_one({
+        "user_id": user_id, 
+        "is_active": True, 
+        "goal_type": goal_data.goal_type
+    })
     
     new_data = goal_data.model_dump()
     new_data["user_id"] = user_id
     new_data["updated_at"] = datetime.now()
     
+    # Auto-set month/year/week based on goal_type
+    now = datetime.now()
+    if new_data.get("goal_type") == "weekly":
+        new_data["week"] = now.isocalendar()[1]  # ISO week number
+        new_data["year"] = now.year
+        new_data["month"] = None
+    elif new_data.get("goal_type") == "monthly":
+        new_data["month"] = now.month
+        new_data["year"] = now.year
+        new_data["week"] = None
+    elif new_data.get("goal_type") == "yearly":
+        new_data["year"] = now.year
+        new_data["month"] = None
+        new_data["week"] = None
+    
     if not existing:
         new_data["created_at"] = datetime.now()
-        # MongoDB _id will be used as internal id, but we can set an 'id' field for consistency if we want
-        # but the schema expects GoalResponse which has 'id'. 
-        # Let's map _id to id in the response or use a UUID.
         import uuid
         new_data["id"] = str(uuid.uuid4())
         db.goals.insert_one(new_data)
+        return db.goals.find_one({"id": new_data["id"]})
     else:
         db.goals.update_one(
-            {"user_id": user_id},
+            {"_id": existing["_id"]}, # Safer to update by _id
             {"$set": new_data}
         )
-    
-    return db.goals.find_one({"user_id": user_id})
+        return db.goals.find_one({"_id": existing["_id"]})
 
 @router.put("/user/{user_id}", response_model=GoalResponse)
 def update_goal(user_id: str, goal_update: GoalUpdate, db: Database = Depends(get_db)):
@@ -49,19 +71,61 @@ def update_goal(user_id: str, goal_update: GoalUpdate, db: Database = Depends(ge
     update_data = goal_update.model_dump(exclude_unset=True)
     update_data["updated_at"] = datetime.now()
     
-    existing = db.goals.find_one({"user_id": user_id})
+    existing = db.goals.find_one({"user_id": user_id, "is_active": True})
     
     if not existing:
         import uuid
         update_data["user_id"] = user_id
         update_data["created_at"] = datetime.now()
         update_data["id"] = str(uuid.uuid4())
+        
+        # Auto-set month/year/week
+        now = datetime.now()
+        if update_data.get("goal_type") == "weekly":
+            update_data["week"] = now.isocalendar()[1]
+            update_data["year"] = now.year
+            update_data["month"] = None
+        elif update_data.get("goal_type") == "monthly":
+            update_data["month"] = now.month
+            update_data["year"] = now.year
+            update_data["week"] = None
+        elif update_data.get("goal_type") == "yearly":
+            update_data["year"] = now.year
+            update_data["month"] = None
+            update_data["week"] = None
+            
         db.goals.insert_one(update_data)
     else:
         db.goals.update_one(
-            {"user_id": user_id},
+            {"user_id": user_id, "is_active": True},
             {"$set": update_data}
         )
     
-    return db.goals.find_one({"user_id": user_id})
+    return db.goals.find_one({"user_id": user_id, "is_active": True})
 
+@router.post("/user/{user_id}/mark-achieved")
+def mark_goal_achieved(user_id: str, goal_id: str, db: Database = Depends(get_db)):
+    """Mark a goal as achieved"""
+    result = db.goals.update_one(
+        {"user_id": user_id, "id": goal_id},
+        {"$set": {"achieved": True, "achieved_date": datetime.now(), "is_active": False}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    return {"message": "Goal marked as achieved"}
+
+@router.delete("/user/{user_id}")
+def delete_active_goal(user_id: str, goal_type: Optional[str] = None, db: Database = Depends(get_db)):
+    """Delete active goal(s) for a user. Optional: specify goal_type to delete only one."""
+    query = {"user_id": user_id, "is_active": True}
+    if goal_type:
+        query["goal_type"] = goal_type.lower()
+        
+    result = db.goals.delete_many(query)
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="No active goal found to delete")
+    
+    return {"message": "Goal(s) deleted successfully", "deleted_count": result.deleted_count}

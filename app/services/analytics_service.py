@@ -96,6 +96,32 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
 
     df = pd.DataFrame(data)
 
+    # --- Time-Based Analytics (For Goals) ---
+    now = datetime.now()
+    
+    # Weekly Profit (Current Week)
+    current_week = now.isocalendar()[1]
+    current_year = now.year
+    # Filter trades for current week & year
+    # Note: open_time is datetime object in Mongo
+    
+    # Helper to check if date in current week
+    def is_current_week(dt):
+        if not dt: return False
+        return dt.isocalendar()[1] == current_week and dt.year == current_year
+
+    def is_current_month(dt):
+        if not dt: return False
+        return dt.month == now.month and dt.year == now.year
+        
+    def is_current_year(dt):
+        if not dt: return False
+        return dt.year == now.year
+
+    weekly_profit = sum(t["net_profit"] for t in data if is_current_week(t["open_time"]))
+    monthly_profit = sum(t["net_profit"] for t in data if is_current_month(t["open_time"]))
+    yearly_profit = sum(t["net_profit"] for t in data if is_current_year(t["open_time"]))
+
     # --- BEGINNER ---
     total_trades = len(df)
     total_pl = df['net_profit'].sum()
@@ -103,16 +129,49 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     avg_win = df[df['win'] == 1]['net_profit'].mean() if df['win'].sum() > 0 else 0
     avg_loss = df[df['loss'] == 1]['net_profit'].mean() if df['loss'].sum() > 0 else 0
     
-    # Avg Risk (Use Avg Loss as proxy for Risk if explicit risk not available, user friendly)
+    # Avg Risk
     avg_risk = abs(avg_loss) if avg_loss != 0 else 0
 
     beginner = {
         "total_pl": float(total_pl),
+        "weekly_profit": float(weekly_profit),
+        "monthly_profit": float(monthly_profit),
+        "yearly_profit": float(yearly_profit),
         "win_rate": float(win_rate),
         "total_trades": int(total_trades),
         "avg_risk": float(avg_risk),
         "equity_curve": equity_curve[-20:] if len(equity_curve) > 20 else equity_curve # Last 20 points for sparkline
     }
+
+    # --- Goal Achievement Check ---
+    try:
+        active_goals = list(db.goals.find({"user_id": user_id, "is_active": True}))
+        for goal in active_goals:
+            g_type = goal.get("goal_type")
+            target = goal.get("target_amount", 0)
+            
+            if target <= 0: continue
+            
+            current_profit = 0
+            if g_type == "weekly":
+                current_profit = weekly_profit
+            elif g_type == "monthly":
+                current_profit = monthly_profit
+            elif g_type == "yearly":
+                current_profit = total_pl
+                
+            if current_profit >= target:
+                db.goals.update_one(
+                    {"_id": goal["_id"]},
+                    {"$set": {
+                        "achieved": True, 
+                        "is_active": False, 
+                        "achieved_date": datetime.now(),
+                        "final_amount": current_profit
+                    }}
+                )
+    except Exception as e:
+        print(f"Error checking goal achievement: {e}")
 
     # --- INTERMEDIATE ---
     # Strategy Performance
