@@ -21,18 +21,32 @@ def get_user_goals(user_id: str, db: Database = Depends(get_db)):
     )
 
     # Fix 2: Migrate legacy field names (weekly_profit_target -> target_amount)
-    legacy = list(db.goals.find({
+    # Also handle cases where target_amount is None or missing
+    db.goals.update_many(
+        {"user_id": user_id, "target_amount": None},
+        {"$set": {"target_amount": 0.0}}
+    )
+
+    legacy_query = {
         "user_id": user_id,
-        "target_amount": {"$exists": False},
+        "$or": [
+            {"target_amount": {"$exists": False}}, 
+            {"target_amount": 0.0},
+            {"target_amount": None}
+        ],
         "$or": [{"weekly_profit_target": {"$exists": True}}, {"monthly_profit_target": {"$exists": True}}]
-    }))
+    }
+    
+    legacy = list(db.goals.find(legacy_query))
     for lg in legacy:
-        target = lg.get("weekly_profit_target") or lg.get("monthly_profit_target") or 0
-        g_type = "weekly" if lg.get("weekly_profit_target") else "monthly"
-        db.goals.update_one(
-            {"_id": lg["_id"]},
-            {"$set": {"target_amount": float(target), "goal_type": g_type, "is_active": True}}
-        )
+        # Prioritize legacy if target_amount is 0 or missing
+        target = lg.get("weekly_profit_target") or lg.get("monthly_profit_target") or 0.0
+        if target > 0:
+            g_type = "weekly" if lg.get("weekly_profit_target") else "monthly"
+            db.goals.update_one(
+                {"_id": lg["_id"]},
+                {"$set": {"target_amount": float(target), "goal_type": g_type, "is_active": True}}
+            )
 
     # --- FINAL FETCH ---
     goals = list(db.goals.find({"user_id": user_id, "is_active": True}))
