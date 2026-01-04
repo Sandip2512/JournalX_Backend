@@ -46,16 +46,51 @@ origins = [
     "http://127.0.0.1:8080",
     "http://192.168.1.3:8080",
     "http://localhost:5173",
+    "http://127.0.0.1:5173", 
+    "http://127.0.0.1:5173", 
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Middleware to log requests and handle CORS manually for debugging
+@app.middleware("http")
+async def cors_debugging_middleware(request: Request, call_next):
+    client_ip = request.client.host
+    method = request.method
+    url = request.url
+    origin = request.headers.get("origin")
+    
+    logger.info(f"📨 {method} {url} | Origin: {origin}")
+
+    # Handle OPTIONS requests manually to return 200 OK with headers
+    if method == "OPTIONS":
+        response = JSONResponse(content={"message": "OK"})
+        response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
+        response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+
+    try:
+        response = await call_next(request)
+        # Add CORS headers to all responses
+        if origin:
+             response.headers["Access-Control-Allow-Origin"] = origin
+             response.headers["Access-Control-Allow-Credentials"] = "true"
+             response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
+             response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+    except Exception as e:
+        logger.error(f"❌ Request failed: {str(e)}")
+        raise
+
+# Disable default CORSMiddleware for now to avoid conflicts
+# or keep it as backup, but the manual middleware runs first (or last added wraps first? In Starlette: last added wraps outer layers.)
+# @app.middleware adds to outer layer? No.
+# app.add_middleware adds to the stack.
+# If we use @app.middleware, it's added.
+# Let's rely on the manual middleware to handle OPTIONS.
+
 
 
 
@@ -114,6 +149,7 @@ def health_check():
         return {
             "status": "healthy" if db_healthy else "degraded",
             "message": "Backend server is running",
+            "version": "v1.1.2-goals-fix-final",
             "database": db_status,
             "timestamp": datetime.now().isoformat()
         }

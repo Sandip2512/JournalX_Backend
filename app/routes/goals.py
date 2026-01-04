@@ -29,12 +29,21 @@ def get_user_goals(user_id: str, db: Database = Depends(get_db)):
 
     legacy_query = {
         "user_id": user_id,
-        "$or": [
-            {"target_amount": {"$exists": False}}, 
-            {"target_amount": 0.0},
-            {"target_amount": None}
-        ],
-        "$or": [{"weekly_profit_target": {"$exists": True}}, {"monthly_profit_target": {"$exists": True}}]
+        "$and": [
+            {
+                "$or": [
+                    {"target_amount": {"$exists": False}}, 
+                    {"target_amount": 0.0},
+                    {"target_amount": None}
+                ]
+            },
+            {
+                "$or": [
+                    {"weekly_profit_target": {"$exists": True}}, 
+                    {"monthly_profit_target": {"$exists": True}}
+                ]
+            }
+        ]
     }
     
     legacy = list(db.goals.find(legacy_query))
