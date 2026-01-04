@@ -12,9 +12,30 @@ router = APIRouter(
 
 @router.get("/user/{user_id}", response_model=List[GoalResponse])
 def get_user_goals(user_id: str, db: Database = Depends(get_db)):
-    """Get all active goals for a specific user"""
+    """Get all active goals with automatic production data repair"""
+    # --- AUTO-REPAIR SECTION ---
+    # Fix 1: Reactivate goals that were accidentally hidden by the achievement bug
+    db.goals.update_many(
+        {"user_id": user_id, "is_active": False, "target_amount": {"$gt": 0}},
+        {"$set": {"is_active": True}}
+    )
+
+    # Fix 2: Migrate legacy field names (weekly_profit_target -> target_amount)
+    legacy = list(db.goals.find({
+        "user_id": user_id,
+        "target_amount": {"$exists": False},
+        "$or": [{"weekly_profit_target": {"$exists": True}}, {"monthly_profit_target": {"$exists": True}}]
+    }))
+    for lg in legacy:
+        target = lg.get("weekly_profit_target") or lg.get("monthly_profit_target") or 0
+        g_type = "weekly" if lg.get("weekly_profit_target") else "monthly"
+        db.goals.update_one(
+            {"_id": lg["_id"]},
+            {"$set": {"target_amount": float(target), "goal_type": g_type, "is_active": True}}
+        )
+
+    # --- FINAL FETCH ---
     goals = list(db.goals.find({"user_id": user_id, "is_active": True}))
-    # If no goals, return empty list instead of 404 to be friendlier
     return goals
 
 @router.get("/user/{user_id}/achieved", response_model=List[GoalResponse])
