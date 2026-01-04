@@ -13,7 +13,6 @@ router = APIRouter(
 @router.get("/user/{user_id}", response_model=List[GoalResponse])
 def get_user_goals(user_id: str, db: Database = Depends(get_db)):
     """Get all active goals with automatic production data repair"""
-    print(f"🎯 Backend fetching goals for: {user_id}")
     # --- AUTO-REPAIR SECTION ---
     # Fix 1: Reactivate goals that were accidentally hidden by the achievement bug
     db.goals.update_many(
@@ -38,9 +37,22 @@ def get_user_goals(user_id: str, db: Database = Depends(get_db)):
         
         db.goals.update_one({"_id": az["_id"]}, {"$set": {"target_amount": float(target)}})
 
-    # --- FINAL FETCH ---
-    goals = list(db.goals.find({"user_id": user_id, "is_active": True}))
-    return goals
+    # --- FINAL FETCH with deduplication ---
+    raw_goals = list(db.goals.find({"user_id": user_id, "is_active": True}).sort("updated_at", -1))
+    
+    # Keep only one goal per type (the most recent one)
+    final_goals = []
+    seen_types = set()
+    for g in raw_goals:
+        g_type = g.get("goal_type")
+        if g_type not in seen_types:
+            final_goals.append(g)
+            seen_types.add(g_type)
+        else:
+            # Mark the older duplicate as inactive in background to clean up DB
+            db.goals.update_one({"_id": g["_id"]}, {"$set": {"is_active": False}})
+            
+    return final_goals
 
 @router.get("/user/{user_id}/achieved", response_model=List[GoalResponse])
 def get_achieved_goals(user_id: str, db: Database = Depends(get_db)):

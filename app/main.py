@@ -149,7 +149,7 @@ def health_check():
         return {
             "status": "healthy" if db_healthy else "degraded",
             "message": "Backend server is running",
-            "version": "v1.1.3-DIAGNOSTIC",
+            "version": "v1.1.5-CLEAN-SUCCESS",
             "database": db_status,
             "timestamp": datetime.now().isoformat()
         }
