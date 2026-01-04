@@ -1,11 +1,21 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 
 class GoalBase(BaseModel):
+    goal_type: Literal["weekly", "monthly", "yearly"] = "monthly"
+    target_amount: Optional[float] = 0.0
+    # Legacy fields (optional to keep for backward compat)
+    weekly_profit_target: Optional[float] = 0.0
     monthly_profit_target: Optional[float] = 0.0
+    yearly_profit_target: Optional[float] = 0.0
     max_daily_loss: Optional[float] = 0.0
     max_trades_per_day: Optional[int] = 0
+    year: Optional[int] = None  # For yearly goals
+    month: Optional[int] = None  # For monthly goals
+    week: Optional[int] = None  # For weekly goals (week number of year)
+    achieved: Optional[bool] = False
+    achieved_date: Optional[datetime] = None
     is_active: Optional[bool] = True
 
 class GoalCreate(GoalBase):

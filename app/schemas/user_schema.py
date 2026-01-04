@@ -32,6 +32,8 @@ class UserResponse(UserBase):
     user_id: str
     role: str
     is_active: bool
+    daily_loss_limit: Optional[float] = 0.0
+    max_daily_trades: Optional[int] = 0
 
     class Config:
         from_attributes = True
@@ -40,6 +42,8 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     mobile_number: Optional[str] = None
+    daily_loss_limit: Optional[float] = None
+    max_daily_trades: Optional[int] = None
 
 
 class ForgotPasswordRequest(BaseModel):

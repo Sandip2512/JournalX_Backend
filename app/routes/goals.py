@@ -13,6 +13,7 @@ router = APIRouter(
 @router.get("/user/{user_id}", response_model=List[GoalResponse])
 def get_user_goals(user_id: str, db: Database = Depends(get_db)):
     """Get all active goals with automatic production data repair"""
+    print(f"🎯 Backend fetching goals for: {user_id}")
     # --- AUTO-REPAIR SECTION ---
     # Fix 1: Reactivate goals that were accidentally hidden by the achievement bug
     db.goals.update_many(

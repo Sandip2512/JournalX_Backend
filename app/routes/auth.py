@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from app.mongo_database import get_db
 from app.crud.user_crud import login_user
-from app.schemas.user_schema import UserLogin, UserResponse
+from app.schemas.user_schema import UserLogin, UserResponse, UserUpdate
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -119,3 +119,26 @@ def log_login_history(user_id: str, ip_address: str, status: str, db: Database):
         db.login_history.insert_one(log)
     except Exception as e:
         print(f"⚠️ Failed to log login history: {e}")
+
+@router.put("/profile", response_model=UserResponse)
+def update_profile(
+    user_update: UserUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Database = Depends(get_db)
+):
+    """
+    Update current user's profile and settings.
+    Clients can update first_name, last_name, mobile, daily_loss_limit, max_daily_trades.
+    """
+    update_data = user_update.model_dump(exclude_unset=True)
+    
+    if not update_data:
+        return current_user
+        
+    db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": update_data}
+    )
+    
+    updated_user = db.users.find_one({"user_id": current_user["user_id"]})
+    return UserResponse(**updated_user)

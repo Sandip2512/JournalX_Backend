@@ -89,19 +89,28 @@ def get_discipline_stats(user_id: str, days: int = 30, db: Database = Depends(ge
         # Get history
         history = get_discipline_history(user_id, days, db)
         
-        total_days = len(history)
-        compliant_days = sum(1 for d in history if d["all_rules_followed"])
-        violation_days = total_days - compliant_days
-        compliance_rate = (compliant_days / total_days * 100) if total_days > 0 else 0
+        # Filter for active trading days only for stats
+        active_days = [d for d in history if d["total_trades"] > 0]
         
-        # Calculate streaks
+        total_active_days = len(active_days)
+        compliant_days = sum(1 for d in active_days if d["all_rules_followed"])
+        violation_days = total_active_days - compliant_days
+        compliance_rate = (compliant_days / total_active_days * 100) if total_active_days > 0 else 0.0
+        
+        # Calculate streaks (ignoring non-trading days - they don't break streak but don't add to it)
         current_streak = 0
         best_streak = 0
         worst_streak = 0
         temp_streak = 0
         temp_violation_streak = 0
         
-        for day in reversed(history):  # Start from oldest
+        # Sort history by date ascending for streak calculation
+        sorted_history = sorted(history, key=lambda x: x["date"])
+        
+        for day in sorted_history:
+            if day["total_trades"] == 0:
+                continue
+                
             if day["all_rules_followed"]:
                 temp_streak += 1
                 temp_violation_streak = 0
@@ -111,16 +120,23 @@ def get_discipline_stats(user_id: str, days: int = 30, db: Database = Depends(ge
                 temp_streak = 0
                 worst_streak = max(worst_streak, temp_violation_streak)
         
-        # Current streak is the most recent
-        for day in history:  # Start from most recent
+        # Current streak logic: Look backwards from today, skipping empty days until a break
+        # We need the history sorted descending (newest first) for this check
+        descending_history = sorted(history, key=lambda x: x["date"], reverse=True)
+        current_streak = 0
+        
+        for day in descending_history:
+            if day["total_trades"] == 0:
+                continue
+            
             if day["all_rules_followed"]:
                 current_streak += 1
             else:
-                break
+                break # Streak broken
         
         return {
-            "total_days": total_days,
-            "compliant_days": compliant_days,
+            "total_days": len(history), # Keep total calendar days for context if needed
+            "compliant_days": compliant_days, # Actually compliant active days
             "violation_days": violation_days,
             "compliance_rate": round(compliance_rate, 1),
             "current_streak": current_streak,

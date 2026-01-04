@@ -7,8 +7,9 @@ def create_trade(db: Database, trade_data: dict):
     
     # Auto-generate trade_no if not provided
     if 'trade_no' not in trade_data or trade_data['trade_no'] is None:
-        # Get max trade_no using aggregation (efficient for large collections)
+        # Get max trade_no for THIS USER using aggregation
         pipeline = [
+            {"$match": {"user_id": trade_data['user_id']}},
             {"$group": {"_id": None, "max_trade_no": {"$max": "$trade_no"}}}
         ]
         result = list(db.trades.aggregate(pipeline))
@@ -24,7 +25,7 @@ def create_trade(db: Database, trade_data: dict):
     return trade_data
 
 def get_trades(db: Database, user_id: str, skip: int = 0, limit: int = 100):
-    cursor = db.trades.find({"user_id": user_id}).skip(skip).limit(limit)
+    cursor = db.trades.find({"user_id": user_id}).sort("trade_no", 1).skip(skip).limit(limit)
     trades = list(cursor)
     # Convert _id to string or remove it
     for t in trades:
