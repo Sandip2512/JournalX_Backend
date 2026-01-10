@@ -37,6 +37,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Database = Depends
         if user is None:
              logger.warning(f"🚫 User not found for email: {email}")
              raise HTTPException(status_code=401, detail="User not found")
+        
+        # Auto-fix/fallback for legacy users missing permanent user_id
+        if "user_id" not in user:
+            logger.info(f"🔧 Missing user_id for {email}, falling back to MongoDB _id")
+            user["user_id"] = str(user["_id"])
              
         # Update last_seen activity (non-critical, wrap in try-except)
         try:
@@ -77,6 +82,11 @@ def login(user_login: UserLogin, request: Request, background_tasks: BackgroundT
         if not db_user:
             print("❌ Login failed: Invalid credentials or user not found")
             raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        # Auto-fix/fallback for legacy users missing permanent user_id
+        if "user_id" not in db_user:
+            logger.info(f"🔧 Standardizing missing user_id for {user_login.email} during login")
+            db_user["user_id"] = str(db_user["_id"])
 
         # Record success in background
         background_tasks.add_task(log_login_history, db_user["user_id"], client_ip, "success", db)

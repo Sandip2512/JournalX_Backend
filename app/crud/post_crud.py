@@ -98,38 +98,54 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
         # 6. Enrich Posts
         enriched_posts = []
         for post in posts:
-            user = users_map.get(post["user_id"])
-            if not user:
-                continue
+            try:
+                user = users_map.get(post["user_id"])
+                if not user:
+                    logger.warning(f"⚠️ User {post['user_id']} not found for post {post.get('post_id')}")
+                    continue
 
-            pid = post["post_id"]
-            post_reactions = reactions_map.get(pid, {})
-            like_count = sum(post_reactions.values())
-            comment_count = comments_map.get(pid, 0)
-            
-            # Clean up for Pydantic
-            post.pop("_id", None)
-            
-            enriched_posts.append({
-                "post_id": post.get("post_id"),
-                "user_id": post.get("user_id"),
-                "content": post.get("content", ""),
-                "created_at": post.get("created_at"),
-                "updated_at": post.get("updated_at"),
-                "image_file_id": str(post.get("image_file_id")) if post.get("image_file_id") else None,
-                "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous",
-                "user_email": user.get("email", ""),
-                "like_count": like_count,
-                "comment_count": comment_count,
-                "reactions": post_reactions,
-                "user_reaction": user_reactions.get(pid),
-                "user_has_liked": pid in user_reactions,
-                "image_url": f"/api/posts/images/{str(post['image_file_id'])}" if post.get("image_file_id") else None
-            })
+                pid = post.get("post_id")
+                if not pid:
+                     logger.error(f"❌ Post missing post_id: {post}")
+                     continue
+
+                post_reactions = reactions_map.get(pid, {})
+                like_count = sum(post_reactions.values())
+                comment_count = comments_map.get(pid, 0)
+                
+                # Clean up for Pydantic
+                post_copy = post.copy()
+                post_copy.pop("_id", None)
+                
+                # Robust image URL handling
+                image_id = post_copy.get("image_file_id")
+                img_url = None
+                if image_id:
+                    img_url = f"/api/posts/images/{str(image_id)}"
+
+                enriched_posts.append({
+                    "post_id": pid,
+                    "user_id": post_copy.get("user_id"),
+                    "content": post_copy.get("content", ""),
+                    "created_at": post_copy.get("created_at"),
+                    "updated_at": post_copy.get("updated_at"),
+                    "image_file_id": str(image_id) if image_id else None,
+                    "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous",
+                    "user_email": user.get("email", ""),
+                    "like_count": like_count,
+                    "comment_count": comment_count,
+                    "reactions": post_reactions,
+                    "user_reaction": user_reactions.get(pid),
+                    "user_has_liked": pid in user_reactions,
+                    "image_url": img_url
+                })
+            except Exception as item_err:
+                logger.error(f"❌ Error enriching post {post.get('post_id')}: {item_err}")
+                continue
         
         return enriched_posts
     except Exception as e:
-        logger.error(f"Error getting posts: {str(e)}")
+        logger.error(f"🔥 Critical error in get_posts: {str(e)}", exc_info=True)
         raise
 
 
