@@ -241,14 +241,24 @@ def update_post(db: Database, post_id: str, user_id: str, content: str) -> Optio
             {"$set": {"content": content, "updated_at": datetime.now(timezone.utc)}}
         )
         
+        
+        logger.info(f"✅ Post content updated in DB, fetching updated post...")
         updated_post = get_post_by_id(db, post_id)
+        if not updated_post:
+            logger.error(f"❌ Failed to fetch updated post {post_id} after update")
+            return None
+            
+        logger.info(f"✅ Updated post fetched, ensuring UTC timestamps...")
         if updated_post:
             updated_post["updated_at"] = ensure_utc(updated_post.get("updated_at"))
             updated_post["created_at"] = ensure_utc(updated_post.get("created_at"))
         
+        logger.info(f"✅ update_post completed successfully for {post_id}")
         return updated_post
+    except PermissionError:
+        raise
     except Exception as e:
-        logger.error(f"Error updating post {post_id}: {str(e)}")
+        logger.error(f"❌ Error updating post {post_id}: {str(e)}", exc_info=True)
         raise
 
 
