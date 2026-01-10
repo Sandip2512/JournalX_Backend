@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
+import logging
 from app.mongo_database import get_db
 from app.crud.user_crud import get_user_by_id, update_user_profile
 from app.schemas.user_schema import UserResponse, UserUpdate
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.put("/profile/{user_id}", response_model=UserResponse)
