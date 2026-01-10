@@ -52,15 +52,29 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
     """Get paginated posts sorted by creation date (newest first) - Optimized"""
     try:
         # 1. Fetch raw posts
-        posts = list(db.posts.find().sort("created_at", -1).skip(skip).limit(limit))
+        raw_posts = list(db.posts.find().sort("created_at", -1).skip(skip).limit(limit))
+        if not raw_posts:
+            return []
+
+        # Filter out posts missing critical IDs early
+        posts = []
+        post_ids = []
+        user_ids = set()
+        for p in raw_posts:
+            pid = p.get("post_id")
+            uid = p.get("user_id")
+            if pid and uid:
+                posts.append(p)
+                post_ids.append(pid)
+                user_ids.add(uid)
+            else:
+                logger.warning(f"⚠️ Skipping malformed post (missing ID): {p.get('_id')}")
+
         if not posts:
             return []
 
-        post_ids = [p["post_id"] for p in posts]
-        user_ids = list(set(p["user_id"] for p in posts))
-
         # 2. Batch Fetch Users
-        users_cursor = db.users.find({"user_id": {"$in": user_ids}})
+        users_cursor = db.users.find({"user_id": {"$in": list(user_ids)}})
         users_map = {u["user_id"]: u for u in users_cursor}
 
         # 3. Batch Fetch Reaction Counts
@@ -99,39 +113,41 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
         enriched_posts = []
         for post in posts:
             try:
+                pid = post["post_id"]
                 user = users_map.get(post["user_id"])
-                if not user:
-                    logger.warning(f"⚠️ User {post['user_id']} not found for post {post.get('post_id')}")
-                    continue
-
-                pid = post.get("post_id")
-                if not pid:
-                     logger.error(f"❌ Post missing post_id: {post}")
-                     continue
-
+                
                 post_reactions = reactions_map.get(pid, {})
                 like_count = sum(post_reactions.values())
                 comment_count = comments_map.get(pid, 0)
                 
-                # Clean up for Pydantic
-                post_copy = post.copy()
-                post_copy.pop("_id", None)
-                
-                # Robust image URL handling
-                image_id = post_copy.get("image_file_id")
+                # Robust fields for Pydantic (PostResponse)
+                # Fallback for missing created_at using ObjectId generation time
+                created_at = post.get("created_at")
+                if not created_at and "_id" in post:
+                    created_at = post["_id"].generation_time
+
+                # Standardize names
+                u_name = "Anonymous"
+                u_email = ""
+                if user:
+                    u_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous"
+                    u_email = user.get("email", "")
+
+                # Robust image URL
+                image_id = post.get("image_file_id")
                 img_url = None
                 if image_id:
                     img_url = f"/api/posts/images/{str(image_id)}"
 
                 enriched_posts.append({
                     "post_id": pid,
-                    "user_id": post_copy.get("user_id"),
-                    "content": post_copy.get("content", ""),
-                    "created_at": post_copy.get("created_at"),
-                    "updated_at": post_copy.get("updated_at"),
+                    "user_id": post["user_id"],
+                    "content": post.get("content", ""),
+                    "created_at": created_at or datetime.datetime.now(),
+                    "updated_at": post.get("updated_at"),
                     "image_file_id": str(image_id) if image_id else None,
-                    "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous",
-                    "user_email": user.get("email", ""),
+                    "user_name": u_name,
+                    "user_email": u_email,
                     "like_count": like_count,
                     "comment_count": comment_count,
                     "reactions": post_reactions,
