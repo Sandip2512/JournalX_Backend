@@ -42,22 +42,37 @@ def change_user_password(user_id: str, password_data: ChangePasswordRequest, db:
 @router.get("/community/members")
 def get_community_members(db: Database = Depends(get_db)):
     """Fetch all users to display in the community member list"""
-    users = list(db.users.find({}, {
-        "user_id": 1,
-        "first_name": 1,
-        "last_name": 1,
-        "role": 1,
-        "last_seen": 1
-    }))
-    
-    # Format for response
-    results = []
-    for user in users:
-        results.append({
-            "user_id": user["user_id"],
-            "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
-            "role": user.get("role", "user"),
-            "last_seen": user.get("last_seen").isoformat() + "Z" if user.get("last_seen") else None
+    try:
+        users_cursor = db.users.find({}, {
+            "user_id": 1,
+            "first_name": 1,
+            "last_name": 1,
+            "role": 1,
+            "last_seen": 1
         })
+        users = list(users_cursor)
         
-    return results
+        # Format for response
+        results = []
+        for user in users:
+            try:
+                # Ensure user_id exists
+                uid = user.get("user_id")
+                if not uid:
+                    continue
+                    
+                results.append({
+                    "user_id": uid,
+                    "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous",
+                    "role": user.get("role", "user"),
+                    "last_seen": user.get("last_seen").isoformat() + "Z" if user.get("last_seen") and hasattr(user.get("last_seen"), 'isoformat') else None
+                })
+            except Exception as e:
+                logger.error(f"Error formatting user in community list: {e}")
+                continue
+        
+        logger.info(f"Community members list fetched: {len(results)} users")
+        return results
+    except Exception as e:
+        logger.error(f"Error fetching community members: {e}")
+        return []
