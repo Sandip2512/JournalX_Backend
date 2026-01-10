@@ -61,8 +61,8 @@ def create_post(db: Database, user_id: str, content: str, image_file_id: Optiona
 def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20) -> List[dict]:
     """Get paginated posts sorted by creation date (newest first) - Optimized"""
     try:
-        # 1. Fetch raw posts
-        raw_posts = list(db.posts.find().sort("created_at", -1).skip(skip).limit(limit))
+        # 1. Fetch raw posts - Sorting by created_at DESC then _id DESC for stability
+        raw_posts = list(db.posts.find().sort([("created_at", -1), ("_id", -1)]).skip(skip).limit(limit))
         if not raw_posts:
             return []
 
