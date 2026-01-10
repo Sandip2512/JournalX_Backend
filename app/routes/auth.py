@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pymongo.database import Database
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import logging
 from dotenv import load_dotenv
@@ -133,7 +133,7 @@ def log_login_history(user_id: str, ip_address: str, status: str, db: Database):
             "user_id": user_id,
             "ip_address": ip_address,
             "status": status,
-            "timestamp": datetime.now()
+            "timestamp": datetime.now(timezone.utc)
         }
         db.login_history.insert_one(log)
     except Exception as e:

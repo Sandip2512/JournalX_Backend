@@ -1,5 +1,5 @@
 from pymongo.database import Database
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 import uuid
 import logging
@@ -21,7 +21,7 @@ def create_post(db: Database, user_id: str, content: str, image_file_id: Optiona
             "user_id": user_id,
             "content": content,
             "image_file_id": image_file_id,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "updated_at": None
         }
         
@@ -153,7 +153,7 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
                     "post_id": pid,
                     "user_id": post["user_id"],
                     "content": post.get("content", ""),
-                    "created_at": created_at or datetime.utcnow(),
+                    "created_at": created_at or datetime.now(timezone.utc),
                     "updated_at": post.get("updated_at"),
                     "image_file_id": str(image_id) if image_id else None,
                     "user_name": u_name,
@@ -303,7 +303,7 @@ def toggle_reaction(db: Database, post_id: str, user_id: str, emoji: str = "â¤ï
                     "user_id": user_id, 
                     "user_name": user_name,
                     "emoji": emoji,
-                    "created_at": datetime.utcnow()
+                    "created_at": datetime.now(timezone.utc)
                 }
         else:
             # New reaction
@@ -313,7 +313,7 @@ def toggle_reaction(db: Database, post_id: str, user_id: str, emoji: str = "â¤ï
                 "post_id": post_id,
                 "user_id": user_id,
                 "emoji": emoji,
-                "created_at": datetime.utcnow()
+                "created_at": datetime.now(timezone.utc)
             }
             db.post_likes.insert_one(like_data)
             logger.info(f"User {user_id} reacted {emoji} to post {post_id}")
@@ -396,7 +396,7 @@ def create_comment(db: Database, post_id: str, user_id: str, content: str, paren
             "parent_id": parent_id,
             "user_id": user_id,
             "content": content,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "updated_at": None
         }
         
@@ -490,7 +490,7 @@ def create_comment_like(db: Database, comment_id: str, user_id: str) -> dict:
             "like_id": like_id,
             "comment_id": comment_id,
             "user_id": user_id,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc)
         }
         
         db.comment_likes.insert_one(like_data)
