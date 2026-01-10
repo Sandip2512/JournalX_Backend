@@ -63,9 +63,13 @@ async def create_new_post(
         # Create post
         post = create_post(db, current_user["user_id"], content, image_file_id)
         
-        # Add image URL if image was uploaded
+        # Ensure image_url is consistently set and _id is removed
         if image_file_id:
-            post["image_url"] = f"/api/posts/images/{image_file_id}"
+             post["image_url"] = f"/api/posts/images/{str(image_file_id)}"
+             post["image_file_id"] = str(image_file_id)
+        
+        # Final cleanup for Pydantic
+        post.pop("_id", None)
         
         return PostResponse(**post)
     except HTTPException:

@@ -106,16 +106,19 @@ def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
             like_count = sum(post_reactions.values())
             comment_count = comments_map.get(pid, 0)
             
+            # Clean up for Pydantic
+            post.pop("_id", None)
+            
             enriched_posts.append({
                 **post,
-                "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+                "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous",
                 "user_email": user.get("email", ""),
                 "like_count": like_count,
                 "comment_count": comment_count,
                 "reactions": post_reactions,
                 "user_reaction": None,
                 "user_has_liked": False,
-                "image_url": f"/api/posts/images/{post['image_file_id']}" if post.get("image_file_id") else None
+                "image_url": f"/api/posts/images/{str(post['image_file_id'])}" if post.get("image_file_id") else None
             })
         
         return enriched_posts
@@ -146,8 +149,11 @@ def get_post_by_id(db: Database, post_id: str) -> Optional[dict]:
             "like_count": like_count,
             "comment_count": comment_count,
             "reactions": get_reaction_counts(db, post_id),
-            "image_url": f"/api/posts/images/{post['image_file_id']}" if post.get("image_file_id") else None
+            "image_url": f"/api/posts/images/{str(post['image_file_id'])}" if post.get("image_file_id") else None
         }
+        # Clean for Pydantic
+        result.pop("_id", None)
+        return result
     except Exception as e:
         logger.error(f"Error getting post {post_id}: {str(e)}")
         raise
