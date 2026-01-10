@@ -144,6 +144,32 @@ def get_single_post(
         raise HTTPException(status_code=500, detail="Error fetching post")
 
 
+@router.put("/{post_id}", response_model=PostResponse)
+def update_existing_post(
+    post_id: str,
+    update_data: PostUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: Database = Depends(get_db)
+):
+    """
+    Update a post. Only the owner can update.
+    Requires authentication.
+    """
+    try:
+        updated_post = update_post(db, post_id, current_user["user_id"], update_data.content)
+        if not updated_post:
+            raise HTTPException(status_code=404, detail="Post not found or unauthorized")
+        
+        # Clean for Pydantic
+        updated_post.pop("_id", None)
+        return PostResponse(**updated_post)
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except Exception as e:
+        logger.error(f"Error updating post: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating post")
+
+
 @router.delete("/{post_id}")
 def delete_existing_post(
     post_id: str,

@@ -232,10 +232,15 @@ def update_post(db: Database, post_id: str, user_id: str, content: str) -> Optio
         
         db.posts.update_one(
             {"post_id": post_id},
-            {"$set": {"content": content, "updated_at": datetime.now()}}
+            {"$set": {"content": content, "updated_at": datetime.now(timezone.utc)}}
         )
         
-        return get_post_by_id(db, post_id)
+        updated_post = get_post_by_id(db, post_id)
+        if updated_post:
+            updated_post["updated_at"] = ensure_utc(updated_post.get("updated_at"))
+            updated_post["created_at"] = ensure_utc(updated_post.get("created_at"))
+        
+        return updated_post
     except Exception as e:
         logger.error(f"Error updating post {post_id}: {str(e)}")
         raise
