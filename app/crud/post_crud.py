@@ -48,7 +48,7 @@ def create_post(db: Database, user_id: str, content: str, image_file_id: Optiona
         raise
 
 
-def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
+def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20) -> List[dict]:
     """Get paginated posts sorted by creation date (newest first) - Optimized"""
     try:
         # 1. Fetch raw posts
@@ -64,7 +64,6 @@ def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
         users_map = {u["user_id"]: u for u in users_cursor}
 
         # 3. Batch Fetch Reaction Counts
-        # Format: { post_id: { emoji: count, ... } }
         reaction_pipeline = [
             {"$match": {"post_id": {"$in": post_ids}}},
             {"$group": {
@@ -75,16 +74,13 @@ def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
         reactions_map = {}
         for r in db.post_likes.aggregate(reaction_pipeline):
             _id = r.get("_id", {})
-            if not isinstance(_id, dict):
-                continue
-                
-            pid = _id.get("post_id")
-            emoji = _id.get("emoji") or "❤️"
-            
-            if pid:
-                if pid not in reactions_map:
-                    reactions_map[pid] = {}
-                reactions_map[pid][emoji] = r.get("count", 0)
+            if isinstance(_id, dict):
+                pid = _id.get("post_id")
+                emoji = _id.get("emoji") or "❤️"
+                if pid:
+                    if pid not in reactions_map:
+                        reactions_map[pid] = {}
+                    reactions_map[pid][emoji] = r.get("count", 0)
 
         # 4. Batch Fetch Comment Counts
         comment_pipeline = [
@@ -93,7 +89,13 @@ def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
         ]
         comments_map = {c["_id"]: c["count"] for c in db.post_comments.aggregate(comment_pipeline)}
 
-        # 5. Enrich Posts
+        # 5. Batch Fetch User Reactions
+        user_reactions = {}
+        if current_user_id:
+            user_likes = list(db.post_likes.find({"post_id": {"$in": post_ids}, "user_id": current_user_id}))
+            user_reactions = {l["post_id"]: l["emoji"] for l in user_likes}
+
+        # 6. Enrich Posts
         enriched_posts = []
         for post in posts:
             user = users_map.get(post["user_id"])
@@ -102,7 +104,6 @@ def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
 
             pid = post["post_id"]
             post_reactions = reactions_map.get(pid, {})
-            # Calculate total like count from reactions
             like_count = sum(post_reactions.values())
             comment_count = comments_map.get(pid, 0)
             
@@ -116,8 +117,8 @@ def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
                 "like_count": like_count,
                 "comment_count": comment_count,
                 "reactions": post_reactions,
-                "user_reaction": None,
-                "user_has_liked": False,
+                "user_reaction": user_reactions.get(pid),
+                "user_has_liked": pid in user_reactions,
                 "image_url": f"/api/posts/images/{str(post['image_file_id'])}" if post.get("image_file_id") else None
             })
         
