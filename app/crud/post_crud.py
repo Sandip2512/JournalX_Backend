@@ -28,6 +28,9 @@ def create_post(db: Database, user_id: str, content: str, image_file_id: Optiona
         db.posts.insert_one(post_data)
         logger.info(f"Created post {post_id} for user {user_id}")
         
+        # Remove MongoDB _id to avoid serialization errors
+        post_data.pop("_id", None)
+        
         # Return post with user info
         return {
             **post_data,
@@ -339,6 +342,9 @@ def create_comment(db: Database, post_id: str, user_id: str, content: str, paren
         
         db.post_comments.insert_one(comment_data)
         logger.info(f"User {user_id} commented on post {post_id}")
+        
+        # Remove MongoDB _id
+        comment_data.pop("_id", None)
         
         return {
             **comment_data,
