@@ -38,6 +38,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Database = Depends
              logger.warning(f"🚫 User not found for email: {email}")
              raise HTTPException(status_code=401, detail="User not found")
              
+        # Update last_seen activity
+        db.users.update_one(
+            {"user_id": user["user_id"]},
+            {"$set": {"last_seen": datetime.utcnow()}}
+        )
+             
         return user
     except JWTError:
         logger.warning("🚫 JWT validation failed")
