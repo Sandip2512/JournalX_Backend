@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Request
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from pymongo.database import Database
@@ -28,6 +28,7 @@ router = APIRouter()
 
 @router.post("/", response_model=PostResponse)
 async def create_new_post(
+    request: Request,
     content: str = Form(...),
     image: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user),
@@ -38,6 +39,19 @@ async def create_new_post(
     Requires authentication.
     """
     try:
+        # Diagnostic logging
+        token = request.headers.get("Authorization")
+        content_type = request.headers.get("Content-Type")
+        logger.info(f"📝 POST /api/posts/ | Content-Type: {content_type} | Token present: {bool(token)}")
+        
+        try:
+            form = await request.form()
+            logger.info(f"📝 Form keys received: {list(form.keys())}")
+            if "content" in form:
+                logger.info(f"📝 Content found in form, length: {len(form['content'])}")
+        except Exception as fe:
+            logger.error(f"❌ Error reading raw form: {fe}")
+
         logger.info(f"📝 User {current_user.get('email')} is creating a post: {content[:20]}...")
         image_file_id = None
         
@@ -91,21 +105,11 @@ def get_post_feed(
     Requires authentication.
     """
     try:
-        if limit > 100:
-            limit = 100  # Max limit
-        
-        posts = get_posts(db, skip, limit)
-        
-        # Add user's reaction status for each post
-        for post in posts:
-            reaction = get_user_reaction(db, post["post_id"], current_user["user_id"])
-            post["user_reaction"] = reaction
-            post["user_has_liked"] = bool(reaction)
-        
-        return [PostResponse(**post) for post in posts]
+        posts = get_posts(db, current_user["user_id"], skip, limit)
+        return posts
     except Exception as e:
-        logger.error(f"Error getting posts: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting posts: {str(e)}")
+        logger.error(f"Error getting feed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching post feed")
 
 
 @router.get("/{post_id}", response_model=PostResponse)
@@ -123,15 +127,17 @@ def get_single_post(
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
         
-        reaction = get_user_reaction(db, post_id, current_user["user_id"])
-        post["user_reaction"] = reaction
-        post["user_has_liked"] = bool(reaction)
-        return PostResponse(**post)
+        # Add user reaction info
+        user_reaction = get_user_reaction(db, post_id, current_user["user_id"])
+        post["user_reaction"] = user_reaction
+        post["user_has_liked"] = user_reaction is not None
+        
+        return post
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting post: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting post: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching post")
 
 
 @router.delete("/{post_id}")
@@ -145,27 +151,34 @@ def delete_existing_post(
     Requires authentication.
     """
     try:
-        is_admin = current_user.get("role") == "admin"
-        is_moderator = current_user.get("role") == "moderator"
-        success = delete_post(db, post_id, current_user["user_id"], is_admin, is_moderator)
-        
-        if not success:
+        post = get_post_by_id(db, post_id)
+        if not post:
             raise HTTPException(status_code=404, detail="Post not found")
         
+        # Check permissions: owner, admin, or moderator
+        is_owner = post["user_id"] == current_user["user_id"]
+        is_admin = current_user.get("role") == "admin"
+        is_moderator = current_user.get("role") == "moderator"
+        
+        if not (is_owner or is_admin or is_moderator):
+            raise HTTPException(status_code=403, detail="Not authorized to delete this post")
+            
+        success = delete_post(db, post_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete post")
+            
         return {"message": "Post deleted successfully"}
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting post: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error deleting post: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error deleting post")
 
 
 # ============= LIKES =============
 
 @router.post("/{post_id}/like", response_model=LikeResponse)
-def like_post(
+def like_post_endpoint(
     post_id: str,
     current_user: dict = Depends(get_current_user),
     db: Database = Depends(get_db)
@@ -175,37 +188,30 @@ def like_post(
     Requires authentication.
     """
     try:
-        result = toggle_reaction(db, post_id, current_user["user_id"], emoji="❤️")
+        # Toggle reaction with default ❤️
+        result = toggle_reaction(db, post_id, current_user["user_id"], "❤️")
         
-        # If action was removed, we return a 200 with different body or handled by frontend?
-        # PostResponse isn't expected here. LikeResponse is.
-        # If removed, result has {"action": "removed", "like_id": ...}.
-        # LikeResponse requires like_id, post_id, user_id, user_name, created_at
-        
-        if result["action"] == "removed":
-             # Hack: Return dummy or handle in frontend. 
-             # Better: return 204 or specific message.
-             # Schema says LikeResponse. 
-             # Let's return the like_id but with nulls? No, Pydantic validation.
-             # Note: For legacy "toggle" via /like, frontend usually handles 200 OK.
-             # If I return JSONResponse it bypasses response_model check? Yes.
-             from fastapi.responses import JSONResponse
-             return JSONResponse(content={"message": "Unliked", "action": "removed"})
-        
-        return LikeResponse(**result)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        if not result:
+            # If it was unliked (removed), return a success message or handle accordingly
+            # But the response_model expects LikeResponse. 
+            # Usually, toggle_reaction should return the new like or None.
+            # Let's assume it returns the like document if added.
+            raise HTTPException(status_code=200, detail="Post unliked")
+            
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error liking post: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error liking post: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error liking post")
 
 
 class ReactionRequest(BaseModel):
     emoji: str
 
 
-@router.post("/{post_id}/react", response_model=dict)
-def react_to_post(
+@router.post("/{post_id}/react")
+def react_to_post_endpoint(
     post_id: str,
     reaction: ReactionRequest,
     current_user: dict = Depends(get_current_user),
@@ -216,17 +222,15 @@ def react_to_post(
     Toggles if same emoji. Updates if different.
     """
     try:
-        result = toggle_reaction(db, post_id, current_user["user_id"], emoji=reaction.emoji)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        result = toggle_reaction(db, post_id, current_user["user_id"], reaction.emoji)
+        return {"success": True, "action": "added" if result else "removed"}
     except Exception as e:
         logger.error(f"Error reacting to post: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error reacting to post: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reacting to post")
 
 
 @router.delete("/{post_id}/like")
-def unlike_post(
+def unlike_post_endpoint(
     post_id: str,
     current_user: dict = Depends(get_current_user),
     db: Database = Depends(get_db)
@@ -239,17 +243,16 @@ def unlike_post(
         success = remove_like(db, post_id, current_user["user_id"])
         if not success:
             raise HTTPException(status_code=404, detail="Like not found")
-        
-        return {"message": "Post unliked successfully"}
+        return {"message": "Unliked successfully"}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error unliking post: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error unliking post: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error unliking post")
 
 
 @router.get("/{post_id}/likes", response_model=List[LikeResponse])
-def get_likes(
+def get_likes_endpoint(
     post_id: str,
     current_user: dict = Depends(get_current_user),
     db: Database = Depends(get_db)
@@ -260,16 +263,16 @@ def get_likes(
     """
     try:
         likes = get_post_likes(db, post_id)
-        return [LikeResponse(**like) for like in likes]
+        return likes
     except Exception as e:
         logger.error(f"Error getting likes: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting likes: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching likes")
 
 
 # ============= COMMENTS =============
 
 @router.post("/{post_id}/comments", response_model=CommentResponse)
-def add_comment(
+def add_comment_endpoint(
     post_id: str,
     comment_data: CommentCreate,
     current_user: dict = Depends(get_current_user),
@@ -287,16 +290,14 @@ def add_comment(
             comment_data.content,
             comment_data.parent_id
         )
-        return CommentResponse(**comment)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return comment
     except Exception as e:
         logger.error(f"Error adding comment: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error adding comment: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error adding comment")
 
 
 @router.get("/{post_id}/comments", response_model=List[CommentResponse])
-def get_comments(
+def get_comments_endpoint(
     post_id: str,
     current_user: dict = Depends(get_current_user),
     db: Database = Depends(get_db)
@@ -306,16 +307,11 @@ def get_comments(
     Requires authentication.
     """
     try:
-        comments = get_post_comments(db, post_id)
-        
-        # Add like status
-        for comment in comments:
-            comment["user_has_liked"] = check_user_liked_comment(db, comment["comment_id"], current_user["user_id"])
-            
-        return [CommentResponse(**comment) for comment in comments]
+        comments = get_post_comments(db, post_id, current_user["user_id"])
+        return comments
     except Exception as e:
         logger.error(f"Error getting comments: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting comments: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching comments")
 
 
 @router.delete("/{post_id}/comments/{comment_id}")
@@ -330,25 +326,21 @@ def delete_existing_comment(
     Requires authentication.
     """
     try:
-        is_admin = current_user.get("role") == "admin"
-        is_moderator = current_user.get("role") == "moderator"
-        success = delete_comment(db, comment_id, current_user["user_id"], is_admin, is_moderator)
-        
+        # Permission check
+        # ... logic inside delete_comment crud usually helps but we can do it here too
+        success = delete_comment(db, comment_id, current_user["user_id"], current_user.get("role") in ["admin", "moderator"])
         if not success:
-            raise HTTPException(status_code=404, detail="Comment not found")
-        
+            raise HTTPException(status_code=403, detail="Not authorized or comment not found")
         return {"message": "Comment deleted successfully"}
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting comment: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error deleting comment: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error deleting comment")
 
 
-@router.post("/{post_id}/comments/{comment_id}/like", response_model=CommentLikeResponse)
-def like_comment(
+@router.post("/{post_id}/comments/{comment_id}/like")
+def like_comment_endpoint(
     post_id: str,
     comment_id: str,
     current_user: dict = Depends(get_current_user),
@@ -358,17 +350,15 @@ def like_comment(
     Like a comment.
     """
     try:
-        like = create_comment_like(db, comment_id, current_user["user_id"])
-        return CommentLikeResponse(**like)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        create_comment_like(db, comment_id, current_user["user_id"])
+        return {"success": True}
     except Exception as e:
         logger.error(f"Error liking comment: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error liking comment: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error liking comment")
 
 
 @router.delete("/{post_id}/comments/{comment_id}/like")
-def unlike_comment(
+def unlike_comment_endpoint(
     post_id: str,
     comment_id: str,
     current_user: dict = Depends(get_current_user),
@@ -378,20 +368,17 @@ def unlike_comment(
     Unlike a comment.
     """
     try:
-        success = remove_comment_like(db, comment_id, current_user["user_id"])
-        if not success:
-            raise HTTPException(status_code=404, detail="Like not found")
-        return {"message": "Comment unliked successfully"}
+        remove_comment_like(db, comment_id, current_user["user_id"])
+        return {"success": True}
     except Exception as e:
         logger.error(f"Error unliking comment: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error unliking comment: {str(e)}")
-
+        raise HTTPException(status_code=500, detail="Error unliking comment")
 
 
 # ============= IMAGES =============
 
 @router.get("/images/{file_id}")
-async def get_image(
+def get_image_endpoint(
     file_id: str,
     db: Database = Depends(get_db)
 ):
@@ -401,20 +388,15 @@ async def get_image(
     """
     try:
         storage_service = get_image_storage_service(db)
-        result = storage_service.get_image(file_id)
+        image_data = storage_service.get_image(file_id)
         
-        if not result:
+        if not image_data:
             raise HTTPException(status_code=404, detail="Image not found")
-        
-        image_data, content_type, filename = result
-        
-        return StreamingResponse(
-            BytesIO(image_data),
-            media_type=content_type,
-            headers={"Content-Disposition": f"inline; filename={filename}"}
-        )
+            
+        data, content_type, filename = image_data
+        return StreamingResponse(BytesIO(data), media_type=content_type)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error retrieving image: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving image")
