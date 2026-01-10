@@ -60,7 +60,7 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# Middleware to log requests and handle CORS manually for debugging
+# Middleware to log requests
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     client_ip = request.client.host
@@ -75,13 +75,6 @@ async def log_requests(request: Request, call_next):
     except Exception as e:
         logger.error(f"❌ Request failed: {str(e)}")
         raise
-
-# Disable default CORSMiddleware for now to avoid conflicts
-# or keep it as backup, but the manual middleware runs first (or last added wraps first? In Starlette: last added wraps outer layers.)
-# @app.middleware adds to outer layer? No.
-# app.add_middleware adds to the stack.
-# If we use @app.middleware, it's added.
-# Let's rely on the manual middleware to handle OPTIONS.
 
 
 
