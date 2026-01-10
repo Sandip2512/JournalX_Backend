@@ -111,7 +111,12 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
             post.pop("_id", None)
             
             enriched_posts.append({
-                **post,
+                "post_id": post.get("post_id"),
+                "user_id": post.get("user_id"),
+                "content": post.get("content", ""),
+                "created_at": post.get("created_at"),
+                "updated_at": post.get("updated_at"),
+                "image_file_id": str(post.get("image_file_id")) if post.get("image_file_id") else None,
                 "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous",
                 "user_email": user.get("email", ""),
                 "like_count": like_count,
@@ -143,7 +148,7 @@ def get_post_by_id(db: Database, post_id: str) -> Optional[dict]:
         like_count = db.post_likes.count_documents({"post_id": post_id})
         comment_count = db.post_comments.count_documents({"post_id": post_id})
         
-        return {
+        result = {
             **post,
             "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
             "user_email": user.get("email", ""),

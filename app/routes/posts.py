@@ -105,9 +105,13 @@ def get_post_feed(
     Requires authentication.
     """
     try:
-        posts = get_posts(db, current_user["user_id"], skip, limit)
+        logger.info(f"📋 Fetching feed [v2.1] | user: {current_user.get('email')} | skip: {skip} | limit: {limit}")
+        # Use keyword arguments for robustness
+        posts = get_posts(db=db, current_user_id=current_user["user_id"], skip=skip, limit=limit)
         return posts
     except Exception as e:
+        logger.error(f"Error getting feed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching post feed")
         logger.error(f"Error getting feed: {str(e)}")
         raise HTTPException(status_code=500, detail="Error fetching post feed")
 
