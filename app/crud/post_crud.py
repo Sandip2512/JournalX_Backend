@@ -75,7 +75,12 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
 
         # 2. Batch Fetch Users
         users_cursor = db.users.find({"user_id": {"$in": list(user_ids)}})
-        users_map = {u["user_id"]: u for u in users_cursor}
+        # Use safe mapping to avoid KeyError if user_id is missing in returned doc
+        users_map = {}
+        for u in users_cursor:
+            uid = u.get("user_id")
+            if uid:
+                users_map[uid] = u
 
         # 3. Batch Fetch Reaction Counts
         reaction_pipeline = [
@@ -106,8 +111,13 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
         # 5. Batch Fetch User Reactions
         user_reactions = {}
         if current_user_id:
-            user_likes = list(db.post_likes.find({"post_id": {"$in": post_ids}, "user_id": current_user_id}))
-            user_reactions = {l["post_id"]: l["emoji"] for l in user_likes}
+            user_likes_cursor = db.post_likes.find({"post_id": {"$in": post_ids}, "user_id": current_user_id})
+            # Safe mapping to avoid KeyError on corrupt like records
+            for l in user_likes_cursor:
+                pid = l.get("post_id")
+                emoji = l.get("emoji")
+                if pid and emoji:
+                    user_reactions[pid] = emoji
 
         # 6. Enrich Posts
         enriched_posts = []
