@@ -29,7 +29,7 @@ router = APIRouter()
 @router.post("/", response_model=PostResponse)
 async def create_new_post(
     request: Request,
-    content: str = Form(...),
+    content: str = Form(""),
     image: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user),
     db: Database = Depends(get_db)
@@ -167,7 +167,13 @@ def delete_existing_post(
         if not (is_owner or is_admin or is_moderator):
             raise HTTPException(status_code=403, detail="Not authorized to delete this post")
             
-        success = delete_post(db, post_id)
+        success = delete_post(
+            db, 
+            post_id, 
+            user_id=current_user["user_id"], 
+            is_admin=is_admin, 
+            is_moderator=is_moderator
+        )
         if not success:
             raise HTTPException(status_code=500, detail="Failed to delete post")
             
@@ -331,8 +337,16 @@ def delete_existing_comment(
     """
     try:
         # Permission check
-        # ... logic inside delete_comment crud usually helps but we can do it here too
-        success = delete_comment(db, comment_id, current_user["user_id"], current_user.get("role") in ["admin", "moderator"])
+        is_admin = current_user.get("role") == "admin"
+        is_moderator = current_user.get("role") == "moderator"
+        
+        success = delete_comment(
+            db, 
+            comment_id, 
+            user_id=current_user["user_id"], 
+            is_admin=is_admin, 
+            is_moderator=is_moderator
+        )
         if not success:
             raise HTTPException(status_code=403, detail="Not authorized or comment not found")
         return {"message": "Comment deleted successfully"}
