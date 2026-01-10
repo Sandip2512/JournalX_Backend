@@ -26,6 +26,7 @@ class PostResponse(BaseModel):
     like_count: int = 0
     reactions: Dict[str, int] = {}
     user_reaction: Optional[str] = None
+    user_has_liked: bool = False
     comment_count: int = 0
     created_at: datetime
     updated_at: Optional[datetime] = None

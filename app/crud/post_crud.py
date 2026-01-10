@@ -113,6 +113,8 @@ def get_posts(db: Database, skip: int = 0, limit: int = 20) -> List[dict]:
                 "like_count": like_count,
                 "comment_count": comment_count,
                 "reactions": post_reactions,
+                "user_reaction": None,
+                "user_has_liked": False,
                 "image_url": f"/api/posts/images/{post['image_file_id']}" if post.get("image_file_id") else None
             })
         
