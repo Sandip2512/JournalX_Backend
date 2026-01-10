@@ -210,6 +210,8 @@ def get_post_by_id(db: Database, post_id: str) -> Optional[dict]:
             "like_count": like_count,
             "comment_count": comment_count,
             "reactions": get_reaction_counts(db, post_id),
+            "user_reaction": None,  # Will be set by route if needed
+            "user_has_liked": False,  # Will be set by route if needed
             "image_url": f"/api/posts/images/{str(post['image_file_id'])}" if post.get("image_file_id") else None
         }
         # Clean for Pydantic
@@ -225,9 +227,13 @@ def update_post(db: Database, post_id: str, user_id: str, content: str) -> Optio
     try:
         post = db.posts.find_one({"post_id": post_id})
         if not post:
+            logger.warning(f"🔍 update_post: Post {post_id} not found")
             return None
         
-        if post["user_id"] != user_id:
+        logger.info(f"📝 update_post check | post.user_id: {post.get('user_id')} ({type(post.get('user_id'))}) | provided user_id: {user_id} ({type(user_id)})")
+        
+        if str(post["user_id"]) != str(user_id):
+            logger.warning(f"🚫 update_post: Permission denied. {post['user_id']} != {user_id}")
             raise PermissionError("You can only update your own posts")
         
         db.posts.update_one(

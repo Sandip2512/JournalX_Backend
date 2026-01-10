@@ -11,7 +11,7 @@ class PostCreate(BaseModel):
 
 class PostUpdate(BaseModel):
     """Schema for updating a post"""
-    content: Optional[str] = Field(None, min_length=1, max_length=5000, description="Updated post content")
+    content: str = Field(..., min_length=1, max_length=5000, description="Updated post content")
 
 
 class PostResponse(BaseModel):

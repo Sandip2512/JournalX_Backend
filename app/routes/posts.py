@@ -156,12 +156,15 @@ def update_existing_post(
     Requires authentication.
     """
     try:
+        logger.info(f"🔄 PUT /api/posts/{post_id} | user: {current_user.get('email')} | content_len: {len(update_data.content)}")
         updated_post = update_post(db, post_id, current_user["user_id"], update_data.content)
         if not updated_post:
+            logger.warning(f"⚠️ Post not found or unauthorized for update: {post_id}")
             raise HTTPException(status_code=404, detail="Post not found or unauthorized")
         
         # Clean for Pydantic
         updated_post.pop("_id", None)
+        logger.info(f"✅ Post updated successfully: {post_id}")
         return PostResponse(**updated_post)
     except PermissionError as pe:
         raise HTTPException(status_code=403, detail=str(pe))
