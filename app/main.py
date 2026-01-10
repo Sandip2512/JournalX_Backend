@@ -74,11 +74,11 @@ async def cors_debugging_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
         # Add CORS headers to all responses
-        if origin:
-             response.headers["Access-Control-Allow-Origin"] = origin
-             response.headers["Access-Control-Allow-Credentials"] = "true"
-             response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
-             response.headers["Access-Control-Allow-Headers"] = "*"
+        allow_origin = origin if origin else "*"
+        response.headers["Access-Control-Allow-Origin"] = allow_origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
+        response.headers["Access-Control-Allow-Headers"] = "*"
         return response
     except Exception as e:
         logger.error(f"❌ Request failed: {str(e)}")

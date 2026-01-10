@@ -38,7 +38,10 @@ def create_post(db: Database, user_id: str, content: str, image_file_id: Optiona
             "user_email": user.get("email", ""),
             "like_count": 0,
             "comment_count": 0,
-            "reactions": {}
+            "reactions": {},
+            "user_reaction": None,
+            "user_has_liked": False,
+            "image_url": f"/api/posts/images/{image_file_id}" if image_file_id else None
         }
     except Exception as e:
         logger.error(f"Error creating post: {str(e)}")
@@ -201,7 +204,8 @@ def get_reaction_counts(db: Database, post_id: str) -> dict:
         {"$group": {"_id": "$emoji", "count": {"$sum": 1}}}
     ]
     results = list(db.post_likes.aggregate(pipeline))
-    return {r["_id"]: r["count"] for r in results}
+    # Ensure keys are strings (never None) for Pydantic
+    return {str(r["_id"] or "❤️"): r["count"] for r in results}
 
 
 # ============= LIKES / REACTIONS =============
