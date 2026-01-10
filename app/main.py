@@ -80,6 +80,19 @@ async def log_requests(request: Request, call_next):
 
 
 # Exception handlers
+from fastapi.exceptions import RequestValidationError
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"❌ Validation error for {request.method} {request.url}:")
+    for error in exc.errors():
+        logger.error(f"  - {error.get('loc')}: {error.get('msg')} ({error.get('type')})")
+    
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()}
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception(f"Unhandled error: {exc}")
