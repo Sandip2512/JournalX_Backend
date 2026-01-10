@@ -34,7 +34,8 @@ def create_post(db: Database, user_id: str, content: str, image_file_id: Optiona
             "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
             "user_email": user.get("email", ""),
             "like_count": 0,
-            "comment_count": 0
+            "comment_count": 0,
+            "reactions": {}
         }
     except Exception as e:
         logger.error(f"Error creating post: {str(e)}")
@@ -342,7 +343,9 @@ def create_comment(db: Database, post_id: str, user_id: str, content: str, paren
         return {
             **comment_data,
             "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
-            "user_email": user.get("email", "")
+            "user_email": user.get("email", ""),
+            "like_count": 0,
+            "user_has_liked": False
         }
     except Exception as e:
         logger.error(f"Error creating comment: {str(e)}")
