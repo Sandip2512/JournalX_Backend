@@ -38,6 +38,7 @@ async def create_new_post(
     Requires authentication.
     """
     try:
+        logger.info(f"📝 User {current_user.get('email')} is creating a post: {content[:20]}...")
         image_file_id = None
         
         # Handle image upload if provided

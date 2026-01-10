@@ -65,18 +65,30 @@ async def cors_debugging_middleware(request: Request, call_next):
     # Handle OPTIONS requests manually to return 200 OK with headers
     if method == "OPTIONS":
         response = JSONResponse(content={"message": "OK"})
-        response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        else:
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            
         response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
         response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response
 
     try:
         response = await call_next(request)
         # Add CORS headers to all responses
-        allow_origin = origin if origin else "*"
-        response.headers["Access-Control-Allow-Origin"] = allow_origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
+        # IMPORTANT: When Allow-Credentials is true, Allow-Origin CANNOT be "*"
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+        else:
+            # Fallback for requests without origin header (like some mobile or non-browser)
+            # but usually for credentials we need a specific origin.
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            
+        if response.headers.get("Access-Control-Allow-Origin") != "*":
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            
         response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
         response.headers["Access-Control-Allow-Headers"] = "*"
         return response
