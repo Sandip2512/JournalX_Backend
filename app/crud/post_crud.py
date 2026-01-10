@@ -7,6 +7,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Force naive datetimes to be aware UTC"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def create_post(db: Database, user_id: str, content: str, image_file_id: Optional[str] = None) -> dict:
     """Create a new post"""
     try:
@@ -34,6 +43,7 @@ def create_post(db: Database, user_id: str, content: str, image_file_id: Optiona
         # Return post with user info
         return {
             **post_data,
+            "created_at": ensure_utc(post_data.get("created_at")),
             "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
             "user_email": user.get("email", ""),
             "like_count": 0,
@@ -153,8 +163,8 @@ def get_posts(db: Database, current_user_id: str, skip: int = 0, limit: int = 20
                     "post_id": pid,
                     "user_id": post["user_id"],
                     "content": post.get("content", ""),
-                    "created_at": created_at or datetime.now(timezone.utc),
-                    "updated_at": post.get("updated_at"),
+                    "created_at": ensure_utc(created_at or datetime.now(timezone.utc)),
+                    "updated_at": ensure_utc(post.get("updated_at")),
                     "image_file_id": str(image_id) if image_id else None,
                     "user_name": u_name,
                     "user_email": u_email,
@@ -194,6 +204,9 @@ def get_post_by_id(db: Database, post_id: str) -> Optional[dict]:
             **post,
             "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
             "user_email": user.get("email", ""),
+            "content": post.get("content", ""),
+            "created_at": ensure_utc(post.get("created_at") or post["_id"].generation_time),
+            "updated_at": ensure_utc(post.get("updated_at")),
             "like_count": like_count,
             "comment_count": comment_count,
             "reactions": get_reaction_counts(db, post_id),
@@ -355,6 +368,7 @@ def get_post_likes(db: Database, post_id: str) -> List[dict]:
             if user:
                 enriched_likes.append({
                     **like,
+                    "created_at": ensure_utc(like.get("created_at")),
                     "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
                 })
         
@@ -408,6 +422,7 @@ def create_comment(db: Database, post_id: str, user_id: str, content: str, paren
         
         return {
             **comment_data,
+            "created_at": ensure_utc(comment_data.get("created_at")),
             "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
             "user_email": user.get("email", ""),
             "like_count": 0,
@@ -439,7 +454,17 @@ def get_post_comments(db: Database, post_id: str) -> List[dict]:
                     "like_count": like_count
                 })
         
-        return enriched_comments
+        return [
+            {
+                **c, 
+                "created_at": ensure_utc(c.get("created_at")),
+                "updated_at": ensure_utc(c.get("updated_at")),
+                "user_name": c.get("user_name", "Anonymous"),
+                "user_email": c.get("user_email", ""),
+                "like_count": c.get("like_count", 0),
+                "user_has_liked": c.get("user_has_liked", False)
+            } for c in enriched_comments
+        ]
     except Exception as e:
         logger.error(f"Error getting comments for post {post_id}: {str(e)}")
         raise
@@ -498,6 +523,7 @@ def create_comment_like(db: Database, comment_id: str, user_id: str) -> dict:
         
         return {
             **like_data,
+            "created_at": ensure_utc(like_data.get("created_at")),
             "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
         }
     except Exception as e:
