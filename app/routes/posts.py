@@ -14,6 +14,7 @@ from app.schemas.post_schema import (
 )
 from app.crud.post_crud import (
     create_post, get_posts, get_post_by_id, delete_post,
+    update_post,
     toggle_reaction, remove_like, get_post_likes, get_user_reaction,
     create_comment, get_post_comments, delete_comment,
     create_comment_like, remove_comment_like, check_user_liked_comment
