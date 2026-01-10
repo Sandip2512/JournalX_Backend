@@ -34,63 +34,43 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="Forex Trading Journal Backend")
 
-# ----------------- CORS SETUP -----------------
-# Include all possible origins including network IP if used
-# Include specific origins for localhost
+# Include all possible origins
+# Include specific origins for localhost and production
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://192.168.1.3:8080",
     "http://localhost:5173",
-    "http://127.0.0.1:5173", 
-    "http://127.0.0.1:5173", 
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5173",
+    "https://journalx-trading.vercel.app",
+    "https://journalx.vercel.app",
+    "https://journalxbackend-production.up.railway.app",
 ]
+
+# Allow any domain starting with journalx or local
+# This is more robust for subdomains
+allow_origin_regex = r"https?://(localhost|127\.0\.1|journalx).*(\.vercel\.app|\.railway\.app)?"
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 # Middleware to log requests and handle CORS manually for debugging
 @app.middleware("http")
-async def cors_debugging_middleware(request: Request, call_next):
+async def log_requests(request: Request, call_next):
     client_ip = request.client.host
     method = request.method
     url = request.url
-    origin = request.headers.get("origin")
     
-    logger.info(f"📨 {method} {url} | Origin: {origin}")
-
-    # Handle OPTIONS requests manually to return 200 OK with headers
-    if method == "OPTIONS":
-        response = JSONResponse(content={"message": "OK"})
-        if origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-        else:
-            response.headers["Access-Control-Allow-Origin"] = "*"
-            
-        response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        return response
+    logger.info(f"📨 {method} {url} | Client: {client_ip}")
 
     try:
         response = await call_next(request)
-        # Add CORS headers to all responses
-        # IMPORTANT: When Allow-Credentials is true, Allow-Origin CANNOT be "*"
-        if origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
-        else:
-            # Fallback for requests without origin header (like some mobile or non-browser)
-            # but usually for credentials we need a specific origin.
-            response.headers["Access-Control-Allow-Origin"] = "*"
-            
-        if response.headers.get("Access-Control-Allow-Origin") != "*":
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            
-        response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
-        response.headers["Access-Control-Allow-Headers"] = "*"
         return response
     except Exception as e:
         logger.error(f"❌ Request failed: {str(e)}")
