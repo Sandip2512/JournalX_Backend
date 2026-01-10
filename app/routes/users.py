@@ -76,5 +76,5 @@ def get_community_members(db: Database = Depends(get_db)):
         logger.info(f"Community members list fetched: {len(results)} users")
         return results
     except Exception as e:
-        logger.error(f"Error fetching community members: {e}")
-        return []
+        logger.error(f"Error fetching community members: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
