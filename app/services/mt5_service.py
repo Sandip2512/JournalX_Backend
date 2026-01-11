@@ -242,6 +242,12 @@ def fetch_mt5_trades(account: int, password: str, server: str, days: int = 365) 
         trades = []
         for deal in deals:
             try:
+                # Calculate real net profit (Profit + Commission + Swap)
+                raw_profit = getattr(deal, 'profit', 0.0)
+                commission = getattr(deal, 'commission', 0.0)
+                swap = getattr(deal, 'swap', 0.0)
+                net_profit = raw_profit + commission + swap
+
                 trade = {
                     'ticket': deal.ticket,
                     'symbol': deal.symbol,
@@ -249,7 +255,7 @@ def fetch_mt5_trades(account: int, password: str, server: str, days: int = 365) 
                     'price_open': getattr(deal, 'price_open', deal.price),
                     'price_close': getattr(deal, 'price_close', deal.price),
                     'type': 'buy' if deal.type == 0 else 'sell',
-                    'profit': deal.profit,
+                    'profit': net_profit,
                     'time': datetime.fromtimestamp(deal.time) if deal.time else datetime.now(),
                     'tp': getattr(deal, 'tp', 0.0),
                     'sl': getattr(deal, 'sl', 0.0)

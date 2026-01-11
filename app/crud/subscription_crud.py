@@ -19,6 +19,17 @@ def create_subscription(db: Database, sub_data: dict):
     sub_data["created_at"] = datetime.now()
     
     db.subscriptions.insert_one(sub_data)
+    
+    # Create notification
+    db.notifications.insert_one({
+        "user_id": sub_data["user_id"],
+        "title": "Subscription Activated",
+        "content": f"Your {sub_data.get('plan_name', 'Premium')} subscription is now active!",
+        "type": "personal",
+        "is_read": False,
+        "created_at": datetime.now()
+    })
+    
     return sub_data
 
 def update_subscription(db: Database, sub_id: str, update_data: dict):
@@ -47,6 +58,18 @@ def create_transaction(db: Database, tx_data: dict):
         tx_data["invoice_number"] = f"INV-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
     
     db.transactions.insert_one(tx_data)
+    
+    # If transaction is 'paid', notify user
+    if tx_data.get("status") == "paid":
+        db.notifications.insert_one({
+            "user_id": tx_data["user_id"],
+            "title": "Payment Successful",
+            "content": f"Thank you! Your payment of ${tx_data.get('total_amount', 0):.2f} was successful.",
+            "type": "personal",
+            "is_read": False,
+            "created_at": datetime.now()
+        })
+    
     return tx_data
 
 def get_sales_analytics(db: Database):

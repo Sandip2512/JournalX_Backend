@@ -265,7 +265,7 @@ def debug_mt5_credentials(user_id: str, db: Database = Depends(get_db)):
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 
 # ----------------- MT5 Routes -----------------
-from app.routes import auth, admin, admin_users, admin_trades, admin_system, admin_analytics, announcements, analytics, subscription, reports, posts
+from app.routes import auth, admin, admin_users, admin_trades, admin_system, admin_analytics, announcements, analytics, subscription, reports, posts, notifications
 
 app.include_router(mt5.router, prefix="/mt5", tags=["MT5"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
@@ -275,6 +275,7 @@ app.include_router(admin_system.router, prefix="/api/admin/system", tags=["Admin
 app.include_router(admin_analytics.router, prefix="/api/admin/analytics", tags=["Admin Analytics"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(announcements.router, prefix="/api/announcements", tags=["announcements"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"])
 app.include_router(goals.router, prefix="/api/goals", tags=["Goals"])
 from app.routes import discipline
@@ -387,8 +388,9 @@ def get_all_trades(skip: int = 0, limit: int = 100, db: Database = Depends(get_d
     return trades
 
 @app.get("/trades/user/{user_id}", response_model=List[TradeBase])
-def get_trades_by_user(user_id: str, skip: int = 0, limit: int = 100, db: Database = Depends(get_db)):
-    trades = get_trades(db, user_id, skip, limit)
+def get_trades_by_user(user_id: str, skip: int = 0, limit: int = 100, sort: str = "asc", db: Database = Depends(get_db)):
+    sort_desc = (sort.lower() == "desc")
+    trades = get_trades(db, user_id, skip, limit, sort_desc)
     if not trades:
         return []  # Return empty array instead of 404
     return trades
@@ -601,8 +603,17 @@ def get_trade_statistics(user_id: str, db: Database = Depends(get_db)):
     
     total_profit = sum((trade.get("profit_amount") or 0) for trade in trades)
     total_loss = sum((trade.get("loss_amount") or 0) for trade in trades)
+    
+    # Calculate wins using fallback
+    winning_trades = 0
+    for trade in trades:
+        net = trade.get("net_profit")
+        if net is None:
+            net = (trade.get("profit_amount") or 0.0) - (trade.get("loss_amount") or 0.0)
+        if net > 0:
+            winning_trades += 1
+            
     net_profit = total_profit - total_loss
-    winning_trades = sum(1 for trade in trades if (trade.get("net_profit") or 0) > 0)
     losing_trades = total_trades - winning_trades
     
     return {

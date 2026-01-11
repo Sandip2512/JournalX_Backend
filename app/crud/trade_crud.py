@@ -2,8 +2,9 @@ from pymongo.database import Database
 import pymongo
 
 def create_trade(db: Database, trade_data: dict):
-    # Calculate net profit
-    trade_data['net_profit'] = trade_data['profit_amount'] - trade_data['loss_amount']
+    # Calculate net profit if not provided
+    if trade_data.get('net_profit') is None:
+        trade_data['net_profit'] = trade_data.get('profit_amount', 0.0) - trade_data.get('loss_amount', 0.0)
     
     # Auto-generate trade_no if not provided
     if 'trade_no' not in trade_data or trade_data['trade_no'] is None:
@@ -24,8 +25,9 @@ def create_trade(db: Database, trade_data: dict):
     trade_data.pop('_id', None)
     return trade_data
 
-def get_trades(db: Database, user_id: str, skip: int = 0, limit: int = 100):
-    cursor = db.trades.find({"user_id": user_id}).sort("trade_no", 1).skip(skip).limit(limit)
+def get_trades(db: Database, user_id: str, skip: int = 0, limit: int = 100, sort_desc: bool = False):
+    sort_dir = pymongo.DESCENDING if sort_desc else pymongo.ASCENDING
+    cursor = db.trades.find({"user_id": user_id}).sort("trade_no", sort_dir).skip(skip).limit(limit)
     trades = list(cursor)
     # Convert _id to string or remove it
     for t in trades:

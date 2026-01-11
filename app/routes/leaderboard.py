@@ -57,7 +57,12 @@ def calculate_leaderboard_stats(db: Database, time_period: Optional[str] = "all_
         
         total_profit = sum((t.get("profit_amount") or 0) for t in trades)
         total_loss = sum((t.get("loss_amount") or 0) for t in trades)
-        net_profit = sum((t.get("net_profit") or 0) for t in trades)
+        
+        # Calculate net_profit with fallback
+        net_profit = sum(
+            (t.get("net_profit") if t.get("net_profit") is not None else (t.get("profit_amount", 0.0) - t.get("loss_amount", 0.0)))
+            for t in trades
+        )
         
         avg_profit_per_trade = net_profit / total_trades if total_trades > 0 else 0
         

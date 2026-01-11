@@ -60,7 +60,9 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     
     for t in trades:
         # Mongo dict access
-        net = t.get("net_profit", 0.0)
+        net = t.get("net_profit")
+        if net is None:
+            net = t.get("profit_amount", 0.0) - t.get("loss_amount", 0.0)
         equity += net
         
         # Calculate R-Multiple if not present
@@ -126,6 +128,13 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     monthly_profit = sum(t["net_profit"] for t in data if is_current_month(t["open_time"]))
     yearly_profit = sum(t["net_profit"] for t in data if is_current_year(t["open_time"]))
 
+    def is_in_period(dt, days):
+        if not dt: return False
+        return dt >= (now - timedelta(days=days))
+
+    three_month_profit = sum(t["net_profit"] for t in data if is_in_period(t["open_time"], 90))
+    six_month_profit = sum(t["net_profit"] for t in data if is_in_period(t["open_time"], 180))
+
     # --- BEGINNER ---
     total_trades = len(df)
     total_pl = df['net_profit'].sum()
@@ -136,15 +145,20 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     # Avg Risk
     avg_risk = abs(avg_loss) if avg_loss != 0 else 0
 
+    starting_balance = 10000.0 # Default starting capital
+
     beginner = {
+        "starting_balance": float(starting_balance),
         "total_pl": float(total_pl),
         "weekly_profit": float(weekly_profit),
         "monthly_profit": float(monthly_profit),
+        "three_month_profit": float(three_month_profit),
+        "six_month_profit": float(six_month_profit),
         "yearly_profit": float(yearly_profit),
         "win_rate": float(win_rate),
         "total_trades": int(total_trades),
         "avg_risk": float(avg_risk),
-        "equity_curve": equity_curve[-20:] if len(equity_curve) > 20 else equity_curve # Last 20 points for sparkline
+        "equity_curve": equity_curve  # Return full curve for frontend filtering
     }
 
     # --- Goal Achievement Check ---
