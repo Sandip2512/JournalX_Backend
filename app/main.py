@@ -25,7 +25,7 @@ from app.schemas.mt5_schema import MT5CredentialsCreate, MT5CredentialsResponse
 
 # Import routers
 from app.routes.auth import router as auth_router
-from app.routes import mt5, leaderboard, goals  # Import mt5, leaderboard, goals routers
+from app.routes import mt5, leaderboard, goals, chat  # Import mt5, leaderboard, goals, chat routers
 
 # Logging - MUST be initialized before middleware
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +48,8 @@ origins = [
 
 # Allow any domain starting with journalx or local
 # This is more robust for subdomains
-allow_origin_regex = r"https?://(localhost|127\.0\.1|journalx).*(\.vercel\.app|\.railway\.app)?"
+# Updated to support both frontend and backend on Vercel
+allow_origin_regex = r"https?://(localhost|127\.0\.0\.1|.*journalx.*)(\.vercel\.app|\.railway\.app)?.*"
 
 app.add_middleware(
     CORSMiddleware,
@@ -111,12 +112,14 @@ async def startup_event():
     logger.info(f"🌐 CORS enabled for: {', '.join(origins)}")
     try:
         # Connect to MongoDB
+        logger.info("📡 Attempting to connect to MongoDB Atlas...")
         db_client.connect()
         logger.info("✅ MongoDB connection established")
-        logger.info("✅ Server startup complete!")
     except Exception as e:
-        logger.error(f"❌ Database connection failed: {str(e)}")
-        raise
+        logger.error(f"⚠️ Initial database connection failed: {str(e)}")
+        logger.warning("🕒 Server starting in DEGRADED mode. Will retry connection on first request.")
+    
+    logger.info("✅ Server startup sequence finished!")
 
 
 
@@ -285,6 +288,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 from app.routes import users
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
+app.include_router(chat.router, prefix="/api/chat", tags=["AI Chat"])
 
 # ----------------- User Endpoints -----------------
 @app.post("/register", response_model=UserResponse)
