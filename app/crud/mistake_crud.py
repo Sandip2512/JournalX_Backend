@@ -3,12 +3,26 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from bson import ObjectId
 
+def _get_datetime(val):
+    """Helper to ensure we have a datetime object or None"""
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, str):
+        try:
+            # Handle ISO format strings if they exist
+            return datetime.fromisoformat(val.replace('Z', '+00:00'))
+        except:
+            return None
+    return None
+
 def create_mistake(db: Database, mistake_data: dict):
     """Create a new custom mistake type"""
     mistake_data['created_at'] = datetime.utcnow()
     result = db.mistakes.insert_one(mistake_data)
     mistake_data['id'] = str(result.inserted_id)
-    mistake_data.pop('_id', None)
+    # Ensure id is string
+    if '_id' in mistake_data:
+        mistake_data.pop('_id')
     return mistake_data
 
 def get_mistakes(db: Database, user_id: str):
@@ -72,7 +86,7 @@ def get_mistakes(db: Database, user_id: str):
             impact = "Moderate"
         
         result.append({
-            "id": f"auto-{mistake_name.replace(' ', '-').lower()}",
+            "id": f"auto-{str(mistake_name).replace(' ', '-').lower()}",
             "name": mistake_name,
             "category": category,
             "severity": severity,
@@ -213,7 +227,12 @@ def get_frequency_heatmap_data(db: Database, user_id: str, days: int = 35):
     # Count mistakes per day (handle comma-separated values)
     daily_counts = {}
     for trade in trades:
-        date_str = trade['close_time'].strftime('%Y-%m-%d')
+        # Robustly handle close_time
+        close_time = _get_datetime(trade.get('close_time'))
+        if not close_time:
+            continue
+            
+        date_str = close_time.strftime('%Y-%m-%d')
         mistake_str = trade.get("mistake", "")
         if mistake_str and mistake_str != "No Mistake":
             # Split by comma and count each mistake
