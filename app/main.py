@@ -25,9 +25,10 @@ from app.schemas.mt5_schema import MT5CredentialsCreate, MT5CredentialsResponse
 
 # Import routers
 from app.routes.auth import router as auth_router
-from app.routes import mt5, leaderboard, goals, chat  # Import mt5, leaderboard, goals, chat routers
+from app.routes import mt5, leaderboard, goals, chat, mistakes  # Import mt5, leaderboard, goals, chat, mistakes routers
 
 # Logging - MUST be initialized before middleware
+# Trigger reload
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -97,11 +98,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception(f"Unhandled error: {exc}")
-    import traceback
-    logger.error(traceback.format_exc())
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc)}
+        content={"detail": "Internal Server Error"}
     )
 
 # Startup event to verify server initialization
@@ -268,7 +267,7 @@ def debug_mt5_credentials(user_id: str, db: Database = Depends(get_db)):
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 
 # ----------------- MT5 Routes -----------------
-from app.routes import auth, admin, admin_users, admin_trades, admin_system, admin_analytics, announcements, analytics, subscription, reports, posts, notifications
+from app.routes import auth, admin, admin_users, admin_trades, admin_system, admin_analytics, announcements, analytics, subscription, reports, posts, notifications, mistakes
 
 app.include_router(mt5.router, prefix="/mt5", tags=["MT5"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
@@ -289,6 +288,7 @@ from app.routes import users
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
 app.include_router(chat.router, prefix="/api/chat", tags=["AI Chat"])
+app.include_router(mistakes.router, prefix="/api/mistakes", tags=["Mistakes"])
 
 # ----------------- User Endpoints -----------------
 @app.post("/register", response_model=UserResponse)
@@ -392,7 +392,7 @@ def get_all_trades(skip: int = 0, limit: int = 100, db: Database = Depends(get_d
     return trades
 
 @app.get("/trades/user/{user_id}", response_model=List[TradeBase])
-def get_trades_by_user(user_id: str, skip: int = 0, limit: int = 100, sort: str = "asc", db: Database = Depends(get_db)):
+def get_trades_by_user(user_id: str, skip: int = 0, limit: int = 10000, sort: str = "asc", db: Database = Depends(get_db)):
     sort_desc = (sort.lower() == "desc")
     trades = get_trades(db, user_id, skip, limit, sort_desc)
     if not trades:
@@ -597,7 +597,7 @@ def fetch_mt5_trades_endpoint(user_id: str, db: Database = Depends(get_db)):
 # ----------------- Trade Statistics -----------------
 @app.get("/trades/stats/user/{user_id}")
 def get_trade_statistics(user_id: str, db: Database = Depends(get_db)):
-    trades = get_trades(db, user_id, 0, 1000)
+    trades = get_trades(db, user_id, 0, 10000)
     if not trades:
         return {"message": "No trades found", "user_id": user_id}
     

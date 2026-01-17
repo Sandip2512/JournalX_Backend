@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 
 # Simple in-memory cache: {user_id: {"data": data, "timestamp": timestamp}}
 analytics_cache = {}
-CACHE_DURATION_SECONDS = 1
+CACHE_DURATION_SECONDS = 300
 
 def get_cached_analytics(user_id: str):
     if user_id in analytics_cache:
@@ -22,11 +22,14 @@ def cache_analytics(user_id: str, data: Dict):
     }
 
 def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
+    print(f"DEBUG: calculate_analytics called for {user_id}")
     # Check cache
     cached = get_cached_analytics(user_id)
     if cached:
+        print("DEBUG: Returning cached analytics")
         return cached
 
+    print("DEBUG: Cache miss, fetching trades...")
     # Fetch all trades for user
     cursor = db.trades.find({"user_id": user_id}).sort("open_time", 1)
     trades = list(cursor)
