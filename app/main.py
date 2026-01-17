@@ -288,7 +288,7 @@ from app.routes import users
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
 app.include_router(chat.router, prefix="/api/chat", tags=["AI Chat"])
-app.include_router(mistakes.router, prefix="/api/mistakes", tags=["Mistakes"])
+app.include_router(mistakes.router, prefix="/mistakes", tags=["Mistakes"])
 
 # ----------------- User Endpoints -----------------
 @app.post("/register", response_model=UserResponse)
