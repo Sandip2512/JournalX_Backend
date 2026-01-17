@@ -36,8 +36,11 @@ def get_mistakes(db: Database, user_id: str):
     # Count mistakes from trades (handle comma-separated values)
     mistake_counts = {}
     for trade in trades:
-        mistake_str = trade.get("mistake", "")
-        if mistake_str and mistake_str != "No Mistake":
+        # Robust field access
+        m_val = trade.get("mistake")
+        mistake_str = str(m_val) if m_val is not None else ""
+        
+        if mistake_str and mistake_str.lower() != "no mistake":
             # Split by comma and strip whitespace
             mistakes = [m.strip() for m in mistake_str.split(",") if m.strip()]
             for mistake in mistakes:
@@ -143,74 +146,84 @@ def delete_mistake(db: Database, mistake_id: str):
         return False
 
 def get_mistake_analytics(db: Database, user_id: str, time_filter: str = "all"):
-    """Get analytics data for mistakes dashboard"""
-    # Get all trades for the user
-    query = {"user_id": user_id}
-    
-    # Apply time filter
-    if time_filter == "month":
-        from datetime import datetime, timedelta
-        one_month_ago = datetime.utcnow() - timedelta(days=30)
-        query["open_time"] = {"$gte": one_month_ago}
-    
-    trades = list(db.trades.find(query))
-    
-    # Count mistakes (handle comma-separated values)
-    mistake_counts = {}
-    category_counts = {"Behavioral": 0, "Psychological": 0, "Cognitive": 0, "Technical": 0}
-    
-    for trade in trades:
-        mistake_str = trade.get("mistake", "")
-        if mistake_str and mistake_str != "No Mistake":
-            # Split by comma and strip whitespace
-            mistakes = [m.strip() for m in mistake_str.split(",") if m.strip()]
-            for mistake in mistakes:
-                mistake_counts[mistake] = mistake_counts.get(mistake, 0) + 1
-                
-                # Categorize for distribution
-                if "FOMO" in mistake or "Revenge" in mistake:
-                    category_counts["Psychological"] += 1
-                elif "Ignored" in mistake or "No Clear Plan" in mistake or "Not followed" in mistake:
-                    category_counts["Cognitive"] += 1
-                elif "Exited" in mistake or "Late entry" in mistake or "Risked" in mistake:
-                    category_counts["Technical"] += 1
-                else:
-                    category_counts["Behavioral"] += 1
-    
-    # Calculate total mistakes
-    total_mistakes = sum(mistake_counts.values())
-    
-    # Find most common mistake
-    most_common = None
-    if mistake_counts:
-        most_common_name = max(mistake_counts, key=mistake_counts.get)
-        most_common = {
-            "name": most_common_name,
-            "count": mistake_counts[most_common_name]
+    """Get analytics data for mistakes dashboard - Optimized for stability"""
+    try:
+        # Get all trades for the user
+        query = {"user_id": user_id}
+        
+        # Apply time filter safely
+        if time_filter == "month":
+            one_month_ago = datetime.utcnow() - timedelta(days=30)
+            # Try to query both datetime and string versions to be thorough
+            query["$or"] = [
+                {"open_time": {"$gte": one_month_ago}},
+                {"open_time": {"$gte": one_month_ago.isoformat()}}
+            ]
+        
+        trades = list(db.trades.find(query))
+        
+        # Count mistakes (handle comma-separated values)
+        mistake_counts = {}
+        
+        for trade in trades:
+            # Robustly handle mistake field (cast to string and handle None)
+            mistake_val = trade.get("mistake")
+            mistake_str = str(mistake_val) if mistake_val is not None else ""
+            
+            if mistake_str and mistake_str.lower() != "no mistake":
+                # Split by comma and strip whitespace
+                mistakes = [m.strip() for m in mistake_str.split(",") if m.strip()]
+                for mistake in mistakes:
+                    mistake_counts[mistake] = mistake_counts.get(mistake, 0) + 1
+        
+        # Calculate total mistakes
+        total_mistakes = sum(mistake_counts.values())
+        
+        # Find most common mistake safely
+        most_common = None
+        if mistake_counts:
+            try:
+                most_common_name = max(mistake_counts, key=mistake_counts.get)
+                most_common = {
+                    "name": most_common_name,
+                    "count": mistake_counts[most_common_name]
+                }
+            except:
+                pass
+        
+        # Improvement score (placeholder)
+        improvement = 0
+        
+        # Build distribution data
+        sorted_mistakes = sorted(mistake_counts.items(), key=lambda x: x[1], reverse=True)
+        distribution = [
+            {"category": str(name), "count": int(count)} 
+            for name, count in sorted_mistakes[:10]
+        ]
+        
+        # Get custom mistakes (wrapped in its own try-except to be safe)
+        try:
+            custom_mistakes = get_mistakes(db, user_id)
+        except:
+            custom_mistakes = []
+            
+        return {
+            "totalMistakes": int(total_mistakes),
+            "mostCommon": most_common,
+            "improvement": int(improvement),
+            "distribution": distribution,
+            "customMistakes": custom_mistakes
         }
-    
-    # Calculate improvement (placeholder - would need historical data)
-    improvement = 0
-    
-    # Build distribution data - use individual mistakes as requested by user
-    # Sort by count descending for better visualization
-    sorted_mistakes = sorted(mistake_counts.items(), key=lambda x: x[1], reverse=True)
-    
-    distribution = [
-        {"category": name, "count": count} 
-        for name, count in sorted_mistakes[:10]  # Limit to top 10 for cleaner chart
-    ]
-    
-    # Get custom mistakes with counts
-    custom_mistakes = get_mistakes(db, user_id)
-    
-    return {
-        "totalMistakes": total_mistakes,
-        "mostCommon": most_common,
-        "improvement": improvement,
-        "distribution": distribution,
-        "customMistakes": custom_mistakes
-    }
+    except Exception as e:
+        print(f"🔥 CRITICAL ERROR in get_mistake_analytics: {e}")
+        # Return fallback object to prevent frontend crash
+        return {
+            "totalMistakes": 0,
+            "mostCommon": None,
+            "improvement": 0,
+            "distribution": [],
+            "customMistakes": []
+        }
 
 def get_frequency_heatmap_data(db: Database, user_id: str, days: int = 35):
     """Get frequency heatmap data for the last N days"""
