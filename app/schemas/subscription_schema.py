@@ -43,3 +43,19 @@ class SalesAnalytics(BaseModel):
     plan_breakdown: dict
     total_subscribers: int
     active_subscribers: int
+
+class CouponCreate(BaseModel):
+    code: str
+    tier: str  # "pro" or "elite"
+    duration_days: int = 30
+    max_uses: Optional[int] = 1
+
+class CouponRedeem(BaseModel):
+    code: str
+
+class CouponResponse(BaseModel):
+    code: str
+    tier: str
+    is_valid: bool
+    message: str
+

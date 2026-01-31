@@ -25,7 +25,17 @@ class InvoiceService:
         # Header
         elements.append(Paragraph("JournalX Invoice", title_style))
         elements.append(Paragraph(f"Invoice Number: {transaction['invoice_number']}", styles['Normal']))
-        elements.append(Paragraph(f"Date: {transaction['payment_date'].strftime('%Y-%m-%d')}", styles['Normal']))
+        
+        # Handle payment_date - could be datetime or string
+        payment_date = transaction.get('payment_date')
+        if isinstance(payment_date, str):
+            date_str = payment_date.split('T')[0] if 'T' in payment_date else payment_date
+        elif hasattr(payment_date, 'strftime'):
+            date_str = payment_date.strftime('%Y-%m-%d')
+        else:
+            date_str = str(payment_date) if payment_date else datetime.now().strftime('%Y-%m-%d')
+            
+        elements.append(Paragraph(f"Date: {date_str}", styles['Normal']))
         elements.append(Spacer(1, 20))
         
         # Seller & Customer Details
@@ -46,12 +56,29 @@ class InvoiceService:
         elements.append(Spacer(1, 40))
         
         # Subscription Details Table
+        plan_name = transaction['billing_details'].get('plan_name', 'Monthly')
+        payment_method = transaction['billing_details'].get('payment_method', 'card')
+        coupon_code = transaction['billing_details'].get('coupon_code', '')
+        
+        total_amount = transaction.get('total_amount', 0.0)
+        discount_amount = transaction.get('discount_amount', 0.0)
+        amount_paid = transaction.get('amount_paid', total_amount)
+        
         sub_data = [
             ["Description", "Amount"],
-            [f"Subscription Plan: {transaction['billing_details'].get('plan_name', 'Monthly')}", f"${transaction['amount']:.2f}"],
-            ["Tax (GST/VAT)", f"${transaction['tax_amount']:.2f}"],
-            ["Total", f"${transaction['total_amount']:.2f}"]
+            [f"Subscription Plan: {plan_name.title()}", f"${total_amount:.2f}"],
         ]
+        
+        # Add discount row if applicable
+        if discount_amount > 0:
+            discount_label = f"Discount ({coupon_code})" if coupon_code else "Discount"
+            sub_data.append([discount_label, f"-${discount_amount:.2f}"])
+        
+        # Add total
+        sub_data.append(["Total Paid", f"${amount_paid:.2f}"])
+        
+        if payment_method == 'coupon':
+            sub_data.append(["Payment Method", f"Promotional Code: {coupon_code}"])
         
         sub_table = Table(sub_data, colWidths=[350, 100])
         sub_table.setStyle(TableStyle([

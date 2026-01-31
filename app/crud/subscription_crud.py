@@ -9,7 +9,23 @@ def get_subscription(db: Database, subscription_id: str):
     return db.subscriptions.find_one({"id": subscription_id})
 
 def get_user_subscription(db: Database, user_id: str):
-    return db.subscriptions.find_one({"user_id": user_id, "status": "active"})
+    # Source of truth is the User document
+    user = db.users.find_one({"user_id": user_id})
+    if not user:
+        return None
+        
+    tier = user.get("subscription_tier", "free")
+    if tier == "free":
+        return None
+        
+    return {
+        "id": f"sub_{user_id}", # Virtual ID
+        "user_id": user_id,
+        "plan_name": tier,
+        "status": "active", 
+        "renewal_date": user.get("subscription_expiry"),
+        "created_at": user.get("created_at")
+    }
 
 def create_subscription(db: Database, sub_data: dict):
     if "_id" in sub_data:

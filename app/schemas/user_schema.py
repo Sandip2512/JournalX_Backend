@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 import re
@@ -42,7 +43,10 @@ class UserResponse(UserBase):
     preferred_sessions: Optional[list[str]] = []
     favorite_pairs: Optional[list[str]] = []
     currency: Optional[str] = "USD"
+    currency: Optional[str] = "USD"
     timezone: Optional[str] = "UTC"
+    subscription_tier: Optional[str] = "free"
+    subscription_expiry: Optional[datetime] = None
 
     class Config:
         from_attributes = True

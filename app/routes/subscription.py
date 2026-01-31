@@ -4,11 +4,12 @@ from pymongo.database import Database
 from typing import List, Optional
 from app.mongo_database import get_db
 from app.routes.admin import get_current_user_role
-from app.schemas.subscription_schema import SubscriptionResponse, TransactionResponse, SalesAnalytics
 from app.crud.subscription_crud import (
     get_user_subscription, get_user_transactions, 
     get_all_transactions, get_sales_analytics, get_transaction
 )
+from app.crud.coupon_crud import redeem_coupon
+from app.schemas.subscription_schema import SubscriptionResponse, TransactionResponse, SalesAnalytics, CouponRedeem
 from app.services.invoice_service import invoice_service
 
 router = APIRouter()
@@ -42,7 +43,9 @@ def admin_get_transactions(
     transactions = get_all_transactions(db, skip, limit, filters)
     # Pydantic likes dictionaries with string IDs
     for tx in transactions:
-        tx["id"] = str(tx.get("id", ""))
+        tx["id"] = str(tx.get("id") or "")
+        if "_id" in tx:
+            tx["_id"] = str(tx["_id"])
     return transactions
 
 # ------------------- User Routes -------------------
@@ -57,6 +60,17 @@ def get_my_subscription(
         return {"plan_name": "Free", "status": "active"}
     return sub
 
+@router.post("/redeem-coupon")
+def redeem_coupon_code(
+    coupon_data: CouponRedeem,
+    db: Database = Depends(get_db),
+    user: dict = Depends(get_current_user_role)
+):
+    result = redeem_coupon(db, user["user_id"], coupon_data.code)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
 @router.get("/my-transactions", response_model=List[dict])
 def get_my_transactions(
     db: Database = Depends(get_db),
@@ -64,7 +78,9 @@ def get_my_transactions(
 ):
     transactions = get_user_transactions(db, user["user_id"])
     for tx in transactions:
-        tx["id"] = str(tx.get("id", ""))
+        tx["id"] = str(tx.get("id") or "")
+        if "_id" in tx:
+            tx["_id"] = str(tx["_id"])
     return transactions
 
 @router.get("/transactions/{transaction_id}/invoice")
