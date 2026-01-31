@@ -89,6 +89,8 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
             "win": 1 if net > 0 else 0,
             "loss": 1 if net <= 0 else 0,
             "strategy": t.get("strategy", "Unknown"),
+            "type": t.get("type", "BUY"),
+            "symbol": symbol,
             "day_of_week": t.get("open_time").strftime("%A") if t.get("open_time") else "Unknown",
             "equity": equity,
             "open_time": t.get("open_time"),
@@ -203,9 +205,38 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     # Avg R
     avg_r = df['r_multiple'].mean() if 'r_multiple' in df else 0.0
 
+    # Long vs Short
+    long_trades = df[df['type'].str.upper() == 'BUY'] if 'type' in df.columns else pd.DataFrame()
+    short_trades = df[df['type'].str.upper() == 'SELL'] if 'type' in df.columns else pd.DataFrame()
+    
+    def get_dir_stats(dir_df):
+        if dir_df.empty:
+            return {"trades": 0, "pl": 0.0, "winRate": 0.0}
+        dir_win_rate = (dir_df['win'].sum() / len(dir_df)) * 100
+        return {
+            "trades": int(len(dir_df)),
+            "pl": float(dir_df['net_profit'].sum()),
+            "winRate": float(dir_win_rate)
+        }
+
+    long_stats = get_dir_stats(long_trades)
+    short_stats = get_dir_stats(short_trades)
+    
+    # Top Symbols
+    symbol_perf = df.groupby('symbol').agg(
+        trades=('net_profit', 'count'),
+        pl=('net_profit', 'sum'),
+        wins=('win', 'sum')
+    )
+    symbol_perf['winRate'] = (symbol_perf['wins'] / symbol_perf['trades']) * 100
+    top_symbols = symbol_perf.sort_values('pl', ascending=False).head(5).reset_index().rename(columns={'symbol': 'name'}).to_dict('records')
+
     intermediate = {
         "strategy_performance": strategy_perf,
         "day_of_week_performance": day_perf,
+        "long": long_stats,
+        "short": short_stats,
+        "top_symbols": top_symbols,
         "avg_r": float(avg_r)
     }
 
@@ -492,6 +523,7 @@ def get_diary_stats(db: Database, user_id: str, start_date: datetime, end_date: 
                      "trade_no": t.get("trade_no"),
                      "name": f"{t.get('symbol')}", 
                      "date": ref_time.strftime("%b %d"),
+                     "iso_date": ref_time.date().isoformat(),
                      "result": "Win" if (t.get("net_profit") or 0) > 0 else "Loss",
                      "net_profit": t.get("net_profit") or 0,
                      "mistake": t.get("mistake")

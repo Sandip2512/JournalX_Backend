@@ -49,10 +49,21 @@ def create_user(db: Database, user_data: dict):
         "first_name": user_data['first_name'],
         "last_name": user_data['last_name'],
         "email": user_data['email'],
+        "username": user_data['email'].split('@')[0],
         "password": get_password_hash(user_data['password']),
         "mobile_number": user_data.get('mobile_number', ''),
         "role": "user",
         "is_active": True,
+        "is_verified": True,
+        "daily_loss_limit": 0.0,
+        "max_daily_trades": 0,
+        "max_risk_per_trade": 2.0,
+        "max_losing_streak": 3,
+        "risk_reward_ratio": "1:2",
+        "preferred_sessions": [],
+        "favorite_pairs": [],
+        "currency": "USD",
+        "timezone": "UTC",
         "created_at": datetime.datetime.now()
     }
     

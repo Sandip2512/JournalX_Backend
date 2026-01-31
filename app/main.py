@@ -45,6 +45,7 @@ origins = [
     "https://journalx-trading.vercel.app",
     "https://journalx.vercel.app",
     "https://journalxbackend-production.up.railway.app",
+    "http://10.52.195.249:8000",
 ]
 
 # Allow any domain starting with journalx or local
@@ -54,8 +55,7 @@ allow_origin_regex = r"https?://(localhost|127\.0\.0\.1|.*journalx.*)(\.vercel\.
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=allow_origin_regex,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -406,12 +406,21 @@ def get_trade_by_number(trade_no: int, db: Database = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Trade not found")
     return trade
 
-@app.put("/trades/{trade_no}")
-def update_trade_reason_mistake(trade_no: int, reason: str, mistake: str, db: Database = Depends(get_db)):
-    trade = update_trade_reason(db, trade_no, reason, mistake)
+@app.patch("/trades/{trade_no}")
+def partial_update_trade(trade_no: int, trade_data: dict, db: Database = Depends(get_db)):
+    """Update trade fields partially"""
+    trade = update_trade(db, trade_no, trade_data)
     if not trade:
         raise HTTPException(status_code=404, detail="Trade not found")
-    return {"message": "Trade updated successfully"}
+    return {"message": "Trade updated successfully", "trade": trade}
+
+@app.put("/trades/{trade_no}/journal")
+def update_trade_journal_endpoint(trade_no: int, journal_data: dict, db: Database = Depends(get_db)):
+    """Update journaling and execution fields for a trade"""
+    trade = update_trade_journal(db, trade_no, journal_data)
+    if not trade:
+        raise HTTPException(status_code=404, detail="Trade not found")
+    return {"message": "Journal updated successfully", "trade": trade}
 
 @app.delete("/trades/trade/{trade_no}")
 def delete_trade_by_number(trade_no: int, db: Database = Depends(get_db)):
@@ -599,36 +608,66 @@ def fetch_mt5_trades_endpoint(user_id: str, db: Database = Depends(get_db)):
 def get_trade_statistics(user_id: str, db: Database = Depends(get_db)):
     trades = get_trades(db, user_id, 0, 10000)
     if not trades:
-        return {"message": "No trades found", "user_id": user_id}
+        return {
+            "message": "No trades found",
+            "user_id": user_id,
+            "total_trades": 0,
+            "total_profit": 0,
+            "total_loss": 0,
+            "net_profit": 0,
+            "winning_trades": 0,
+            "losing_trades": 0,
+            "win_rate": 0,
+            "avg_win": 0,
+            "avg_loss": 0,
+            "max_win": 0,
+            "max_loss": 0,
+            "profit_factor": 0
+        }
     
     total_trades = len(trades)
-    # trades returned are dicts or Pydantic models? get_trades returns dicts now.
-    # So we use key access.
     
-    total_profit = sum((trade.get("profit_amount") or 0) for trade in trades)
-    total_loss = sum((trade.get("loss_amount") or 0) for trade in trades)
+    winning_trades_list = []
+    losing_trades_list = []
     
-    # Calculate wins using fallback
-    winning_trades = 0
     for trade in trades:
         net = trade.get("net_profit")
         if net is None:
             net = (trade.get("profit_amount") or 0.0) - (trade.get("loss_amount") or 0.0)
+        
         if net > 0:
-            winning_trades += 1
+            winning_trades_list.append(net)
+        else:
+            losing_trades_list.append(net)
             
-    net_profit = total_profit - total_loss
-    losing_trades = total_trades - winning_trades
+    total_profit = sum(winning_trades_list)
+    total_loss = abs(sum(losing_trades_list))
+    
+    winning_trades_count = len(winning_trades_list)
+    losing_trades_count = len(losing_trades_list)
+    
+    avg_win = total_profit / winning_trades_count if winning_trades_count > 0 else 0
+    avg_loss = total_loss / losing_trades_count if losing_trades_count > 0 else 0
+    
+    max_win = max(winning_trades_list) if winning_trades_count > 0 else 0
+    max_loss = min(losing_trades_list) if losing_trades_count > 0 else 0
+    
+    profit_factor = total_profit / total_loss if total_loss > 0 else (total_profit if total_profit > 0 else 0)
     
     return {
         "user_id": user_id,
         "total_trades": total_trades,
         "total_profit": total_profit,
         "total_loss": total_loss,
-        "net_profit": net_profit,
-        "winning_trades": winning_trades,
-        "losing_trades": losing_trades,
-        "win_rate": (winning_trades / total_trades * 100) if total_trades > 0 else 0
+        "net_profit": total_profit - total_loss,
+        "winning_trades": winning_trades_count,
+        "losing_trades": losing_trades_count,
+        "win_rate": (winning_trades_count / total_trades * 100) if total_trades > 0 else 0,
+        "avg_win": avg_win,
+        "avg_loss": avg_loss,
+        "max_win": max_win,
+        "max_loss": max_loss,
+        "profit_factor": round(profit_factor, 2)
     }
 
 # ----------------- Debug All Endpoints -----------------

@@ -26,6 +26,17 @@ class TradeBase(BaseModel):
     strategy: Optional[str] = None
     session: Optional[str] = None
     emotion: Optional[str] = None
+    
+    # Execution & Journaling
+    followed_plan: Optional[bool] = False
+    proper_risk: Optional[bool] = False
+    good_entry: Optional[bool] = False
+    patient_exit: Optional[bool] = False
+    rating: Optional[int] = 0
+    pre_analysis: Optional[bool] = False
+    post_review: Optional[bool] = False
+    is_journaled: Optional[bool] = False
+    
     open_time: datetime
     close_time: datetime
 

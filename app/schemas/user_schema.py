@@ -32,8 +32,17 @@ class UserResponse(UserBase):
     user_id: str
     role: str
     is_active: bool
+    username: Optional[str] = None
+    is_verified: Optional[bool] = True
     daily_loss_limit: Optional[float] = 0.0
     max_daily_trades: Optional[int] = 0
+    max_risk_per_trade: Optional[float] = 2.0
+    max_losing_streak: Optional[int] = 3
+    risk_reward_ratio: Optional[str] = "1:2"
+    preferred_sessions: Optional[list[str]] = []
+    favorite_pairs: Optional[list[str]] = []
+    currency: Optional[str] = "USD"
+    timezone: Optional[str] = "UTC"
 
     class Config:
         from_attributes = True
@@ -42,8 +51,16 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     mobile_number: Optional[str] = None
+    username: Optional[str] = None
     daily_loss_limit: Optional[float] = None
     max_daily_trades: Optional[int] = None
+    max_risk_per_trade: Optional[float] = None
+    max_losing_streak: Optional[int] = None
+    risk_reward_ratio: Optional[str] = None
+    preferred_sessions: Optional[list[str]] = None
+    favorite_pairs: Optional[list[str]] = None
+    currency: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 class ForgotPasswordRequest(BaseModel):

@@ -57,3 +57,18 @@ def update_trade_reason(db: Database, trade_no: int, reason: str, mistake: str):
         {"$set": {"reason": reason, "mistake": mistake}}
     )
     return get_trade_by_trade_no(db, trade_no)
+
+def update_trade_journal(db: Database, trade_no: int, journal_data: dict):
+    # Ensure nested updates or just flat fields
+    db.trades.update_one(
+        {"trade_no": trade_no},
+        {"$set": journal_data}
+    )
+    return get_trade_by_trade_no(db, trade_no)
+
+def update_trade(db: Database, trade_no: int, trade_data: dict):
+    db.trades.update_one(
+        {"trade_no": trade_no},
+        {"$set": trade_data}
+    )
+    return get_trade_by_trade_no(db, trade_no)
