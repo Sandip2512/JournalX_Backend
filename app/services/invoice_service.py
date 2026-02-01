@@ -8,26 +8,57 @@ from datetime import datetime
 class InvoiceService:
     def generate_invoice_pdf(self, transaction: dict) -> BytesIO:
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        # Increased bottom margin for footer
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=60)
         styles = getSampleStyleSheet()
+        
+        # Define Brand Colors
+        brand_blue = colors.HexColor("#3b82f6")
+        brand_slate = colors.HexColor("#1e293b")
+        brand_light_bg = colors.HexColor("#f8fafc")
         
         # Custom styles
         title_style = ParagraphStyle(
-            'TitleStyle',
+            'InvoiceTitle',
             parent=styles['Heading1'],
-            fontSize=24,
-            textColor=colors.HexColor("#3b82f6"), # Primary blue
-            spaceAfter=20
+            fontSize=32,
+            textColor=brand_blue,
+            spaceAfter=30,
+            fontName='Helvetica-Bold'
+        )
+        
+        label_style = ParagraphStyle(
+            'LabelStyle',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.grey,
+            textTransform='uppercase',
+            fontName='Helvetica-Bold',
+            spaceAfter=2
+        )
+        
+        value_style = ParagraphStyle(
+            'ValueStyle',
+            parent=styles['Normal'],
+            fontSize=11,
+            textColor=brand_slate,
+            fontName='Helvetica',
+            spaceAfter=12
+        )
+        
+        small_style = ParagraphStyle(
+            'SmallStyle',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            alignment=1 # Center
         )
         
         elements = []
         
-        # Header
-        elements.append(Paragraph("JournalX Invoice", title_style))
+        # --- Top Header Section (Two Columns) ---
+        # Col 0: Brand/Title | Col 1: Invoice Metadata
         invoice_num = transaction.get('invoice_number', 'N/A')
-        elements.append(Paragraph(f"Invoice Number: {invoice_num}", styles['Normal']))
-        
-        # Handle payment_date - could be datetime or string
         payment_date = transaction.get('payment_date')
         if isinstance(payment_date, str):
             date_str = payment_date.split('T')[0] if 'T' in payment_date else payment_date
@@ -35,29 +66,54 @@ class InvoiceService:
             date_str = payment_date.strftime('%Y-%m-%d')
         else:
             date_str = str(payment_date) if payment_date else datetime.now().strftime('%Y-%m-%d')
-            
-        elements.append(Paragraph(f"Date: {date_str}", styles['Normal']))
-        elements.append(Spacer(1, 20))
-        
-        # Seller & Customer Details
-        billing = transaction.get('billing_details', {})
-        data = [
-            ["Seller:", "Bill To:"],
-            ["JournalX Trading Inc.", billing.get('full_name', 'Customer')],
-            ["123 Trading St.", billing.get('email', '')],
-            ["Finance City, FC 12345", billing.get('address', '')]
+
+        header_data = [
+            [
+                Paragraph("JournalX", title_style),
+                [
+                    Paragraph("Invoice Number", label_style),
+                    Paragraph(invoice_num, value_style),
+                    Paragraph("Date of Issue", label_style),
+                    Paragraph(date_str, value_style)
+                ]
+            ]
         ]
         
-        details_table = Table(data, colWidths=[250, 250])
-        details_table.setStyle(TableStyle([
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        header_table = Table(header_data, colWidths=[350, 150])
+        header_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
         ]))
-        elements.append(details_table)
+        elements.append(header_table)
         elements.append(Spacer(1, 40))
         
-        # Subscription Details Table
+        # --- Billing Info Section ---
+        billing = transaction.get('billing_details', {})
+        billing_data = [
+            [
+                [
+                    Paragraph("Seller", label_style),
+                    Paragraph("JournalX Trading Inc.", value_style),
+                    Paragraph("123 Trading Street", value_style),
+                    Paragraph("Finance City, FC 12345", value_style),
+                ],
+                [
+                    Paragraph("Bill To", label_style),
+                    Paragraph(billing.get('full_name', 'Customer'), value_style),
+                    Paragraph(billing.get('email', ''), value_style),
+                    Paragraph(billing.get('address', 'N/A'), value_style),
+                ]
+            ]
+        ]
+        
+        billing_table = Table(billing_data, colWidths=[250, 250])
+        billing_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+        elements.append(billing_table)
+        elements.append(Spacer(1, 40))
+        
+        # --- Transaction Items Table ---
         plan_name = billing.get('plan_name', 'Monthly')
         payment_method = billing.get('payment_method', 'card')
         coupon_code = billing.get('coupon_code', '')
@@ -66,40 +122,55 @@ class InvoiceService:
         discount_amount = transaction.get('discount_amount', 0.0)
         amount_paid = transaction.get('amount_paid', total_amount)
         
+        # Table Header
         sub_data = [
-            ["Description", "Amount"],
-            [f"Subscription Plan: {str(plan_name).title()}", f"${total_amount:.2f}"],
+            [Paragraph("Description", label_style), Paragraph("Amount", label_style)],
         ]
         
-        # Add discount row if applicable
+        # Principal Item
+        sub_data.append([
+            Paragraph(f"Subscription Plan: {str(plan_name).title()}", value_style),
+            Paragraph(f"${total_amount:.2f}", value_style)
+        ])
+        
+        # Discount Row
         if discount_amount > 0:
             discount_label = f"Discount ({coupon_code})" if coupon_code else "Discount"
-            sub_data.append([discount_label, f"-${discount_amount:.2f}"])
+            sub_data.append([
+                Paragraph(discount_label, value_style),
+                Paragraph(f"-${discount_amount:.2f}", value_style)
+            ])
         
-        # Add total
-        sub_data.append(["Total Paid", f"${amount_paid:.2f}"])
-        
-        if payment_method == 'coupon':
-            sub_data.append(["Payment Method", f"Promotional Code: {coupon_code}"])
-        
-        sub_table = Table(sub_data, colWidths=[350, 100])
+        sub_table = Table(sub_data, colWidths=[400, 100])
         sub_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f3f4f6")),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.black),
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('BACKGROUND', (0,0), (-1,0), brand_light_bg),
+            ('LINEBELOW', (0,0), (-1,0), 0.5, colors.lightgrey),
+            ('BOTTOMPADDING', (0,0), (-1,0), 8),
+            ('TOPPADDING', (1,1), (-1,-1), 8),
             ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
-            ('LINEBELOW', (0,0), (-1,0), 1, colors.black),
-            ('LINEABOVE', (0,-1), (-1,-1), 1, colors.black),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
         ]))
         elements.append(sub_table)
+        elements.append(Spacer(1, 20))
         
-        # Footer
-        elements.append(Spacer(1, 60))
+        # --- Totals Section ---
+        totals_data = [
+            ["", Paragraph("Total Paid", label_style)],
+            ["", Paragraph(f"${amount_paid:.2f}", title_style)]
+        ]
+        if payment_method == 'coupon' and coupon_code:
+            totals_data.append(["", Paragraph(f"Promotion: {coupon_code}", label_style)])
+            
+        totals_table = Table(totals_data, colWidths=[350, 150])
+        totals_table.setStyle(TableStyle([
+            ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ]))
+        elements.append(totals_table)
+        
+        # --- Footer ---
+        elements.append(Spacer(1, 100)) # Large spacer to push to bottom
         elements.append(Paragraph("Thank you for your business!", styles['Italic']))
-        elements.append(Paragraph("For support, contact support@journalx.com", styles['Small']))
+        elements.append(Spacer(1, 5))
+        elements.append(Paragraph("For support, contact support@journalx.com", small_style))
         
         doc.build(elements)
         buffer.seek(0)
