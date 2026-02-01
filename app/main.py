@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo.database import Database
+import pymongo
 from typing import List
 import logging
 from datetime import datetime
@@ -288,7 +289,7 @@ from app.routes import users
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
 app.include_router(chat.router, prefix="/api/chat", tags=["AI Chat"])
-app.include_router(mistakes.router, prefix="/mistakes", tags=["Mistakes"])
+app.include_router(mistakes.router, prefix="/api/mistakes", tags=["Mistakes"])
 
 # ----------------- User Endpoints -----------------
 @app.post("/register", response_model=UserResponse)
@@ -638,6 +639,7 @@ def get_trade_statistics(user_id: str, db: Database = Depends(get_db)):
     # Free tier restriction: Last 30 days only
     user = get_user_by_id(db, user_id)
     sub_tier = user.get("subscription_tier", "free") if user else "free"
+    is_free = sub_tier == "free"
     
     if sub_tier == "free":
         limit_date = datetime.now() - timedelta(days=30)
@@ -654,6 +656,7 @@ def get_trade_statistics(user_id: str, db: Database = Depends(get_db)):
         
     if not trades:
         return {
+            "is_free_tier": is_free,
             "message": "No trades found",
             "user_id": user_id,
             "total_trades": 0,
@@ -700,6 +703,7 @@ def get_trade_statistics(user_id: str, db: Database = Depends(get_db)):
     profit_factor = total_profit / total_loss if total_loss > 0 else (total_profit if total_profit > 0 else 0)
     
     return {
+        "is_free_tier": is_free,
         "user_id": user_id,
         "total_trades": total_trades,
         "total_profit": total_profit,

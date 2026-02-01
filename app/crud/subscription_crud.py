@@ -14,14 +14,14 @@ def get_user_subscription(db: Database, user_id: str):
     if not user:
         return None
         
-    tier = user.get("subscription_tier", "free")
+    tier = (user.get("subscription_tier") or "free").lower()
     if tier == "free":
         return None
         
     return {
         "id": f"sub_{user_id}", # Virtual ID
         "user_id": user_id,
-        "plan_name": tier,
+        "plan_name": tier.capitalize(),
         "status": "active", 
         "renewal_date": user.get("subscription_expiry"),
         "created_at": user.get("created_at")
