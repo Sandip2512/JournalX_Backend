@@ -56,7 +56,7 @@ def run_report_generation(user_id: str, user_name: str, report_type: str, report
 @router.post("/generate")
 async def generate_report(
     background_tasks: BackgroundTasks,
-    report_type: str = Query(..., regex="^(weekly|monthly|yearly|custom)$"),
+    report_type: str = Query(..., pattern="^(weekly|monthly|yearly|custom)$"),
     start_date: str = Query(None),
     end_date: str = Query(None),
     db: Database = Depends(get_db),
@@ -129,7 +129,7 @@ def list_reports(
 
 @router.get("/preview-data")
 def get_report_preview_data(
-    report_type: str = Query(..., regex="^(weekly|monthly|yearly|custom)$"),
+    report_type: str = Query(..., pattern="^(weekly|monthly|yearly|custom)$"),
     start_date: str = Query(None),
     end_date: str = Query(None),
     db: Database = Depends(get_db),

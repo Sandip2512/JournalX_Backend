@@ -104,9 +104,9 @@ def calculate_leaderboard_stats(db: Database, time_period: Optional[str] = "all_
 
 @router.get("/", response_model=List[LeaderboardEntry])
 def get_leaderboard(
-    sort_by: str = Query("net_profit", regex="^(net_profit|win_rate|total_trades|profit_factor)$"),
+    sort_by: str = Query("net_profit", pattern="^(net_profit|win_rate|total_trades|profit_factor)$"),
     limit: int = Query(100, ge=1, le=500),
-    time_period: str = Query("all_time", regex="^(all_time|monthly|weekly|daily)$"),
+    time_period: str = Query("all_time", pattern="^(all_time|monthly|weekly|daily)$"),
     db: Database = Depends(get_db)
 ):
     """
@@ -136,8 +136,8 @@ def get_leaderboard(
 @router.get("/user/{user_id}", response_model=UserRankingResponse)
 def get_user_ranking(
     user_id: str,
-    sort_by: str = Query("net_profit", regex="^(net_profit|win_rate|total_trades|profit_factor)$"),
-    time_period: str = Query("all_time", regex="^(all_time|monthly|weekly|daily)$"),
+    sort_by: str = Query("net_profit", pattern="^(net_profit|win_rate|total_trades|profit_factor)$"),
+    time_period: str = Query("all_time", pattern="^(all_time|monthly|weekly|daily)$"),
     db: Database = Depends(get_db)
 ):
     """
