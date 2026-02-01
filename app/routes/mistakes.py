@@ -29,7 +29,7 @@ async def get_user_mistakes(user_id: str, db: Database = Depends(get_db)):
 @router.get("/analytics/{user_id}")
 async def get_mistake_analytics(
     user_id: str,
-    time_filter: str = Query("all", regex="^(all|month)$"),
+    time_filter: str = Query("all", pattern="^(all|month)$"),
     db: Database = Depends(get_db)
 ):
     """Get analytics data for mistakes page"""
