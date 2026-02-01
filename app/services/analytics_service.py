@@ -155,6 +155,14 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     three_month_profit = sum(t["net_profit"] for t in data if is_in_period(t["open_time"], 90))
     six_month_profit = sum(t["net_profit"] for t in data if is_in_period(t["open_time"], 180))
 
+    # Strict Free Tier Restriction: Cannot see yearly or long-term data
+    if sub_tier == "free":
+        # Since input 'data' is already filtered to 30 days, these would be low anyway,
+        # but let's be explicit for security and clarity.
+        yearly_profit = 0
+        three_month_profit = 0
+        six_month_profit = 0
+
     # --- BEGINNER ---
     total_trades = len(df)
     total_pl = df['net_profit'].sum()
@@ -279,6 +287,7 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     }
 
     result = {
+        "is_free_tier": sub_tier == "free",
         "beginner": beginner,
         "intermediate": intermediate,
         "advanced": advanced
