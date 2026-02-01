@@ -62,6 +62,14 @@ async def generate_report(
     db: Database = Depends(get_db),
     user: dict = Depends(get_current_user_role)
 ):
+    # Tier Check
+    user_tier = user.get("subscription_tier", "free").lower()
+    if user_tier == "free":
+        raise HTTPException(
+            status_code=403, 
+            detail="Performance Reports are only available for Pro and Elite members. Please upgrade your plan."
+        )
+    
     try:
         user_id = user["user_id"]
         user_name = f"{user.get('first_name', 'Trader')} {user.get('last_name', '')}".strip()
@@ -128,6 +136,14 @@ def get_report_preview_data(
     user: dict = Depends(get_current_user_role)
 ):
     """Fetch aggregated data for frontend report preview."""
+    # Tier Check
+    user_tier = user.get("subscription_tier", "free").lower()
+    if user_tier == "free":
+        raise HTTPException(
+            status_code=403, 
+            detail="Performance Reports are only available for Pro and Elite members. Please upgrade your plan."
+        )
+
     try:
         user_id = user["user_id"]
         perf_service = PerformanceService(db)
