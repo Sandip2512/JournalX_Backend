@@ -394,7 +394,32 @@ def get_all_trades(skip: int = 0, limit: int = 100, db: Database = Depends(get_d
 @app.get("/trades/user/{user_id}", response_model=List[TradeBase])
 def get_trades_by_user(user_id: str, skip: int = 0, limit: int = 10000, sort: str = "asc", db: Database = Depends(get_db)):
     sort_desc = (sort.lower() == "desc")
-    trades = get_trades(db, user_id, skip, limit, sort_desc)
+    
+    # Free tier restriction: Last 30 days only
+    user = get_user_by_id(db, user_id)
+    sub_tier = user.get("subscription_tier", "free") if user else "free"
+    
+    if sub_tier == "free":
+        # In get_trades (crud), it just does a find. We might need to override it here or update crud.
+        # However, looking at get_trades in crud, it doesn't take a query.
+        # Let's use the local db access directly or modify get_trades in crud later.
+        # For now, let's filter after fetching if we want to be safe, but more efficient to filter in query.
+        limit_date = datetime.now() - timedelta(days=30)
+        sort_dir = pymongo.DESCENDING if sort_desc else pymongo.ASCENDING
+        query = {
+            "user_id": user_id,
+            "$or": [
+                {"close_time": {"$gte": limit_date}},
+                {"close_time": None, "open_time": {"$gte": limit_date}}
+            ]
+        }
+        cursor = db.trades.find(query).sort("trade_no", sort_dir).skip(skip).limit(limit)
+        trades = list(cursor)
+        for t in trades:
+            t.pop('_id', None)
+    else:
+        trades = get_trades(db, user_id, skip, limit, sort_desc)
+        
     if not trades:
         return []  # Return empty array instead of 404
     return trades
@@ -494,13 +519,17 @@ def fetch_mt5_trades_endpoint(user_id: str, db: Database = Depends(get_db)):
         except (ValueError, TypeError) as e:
             raise HTTPException(status_code=400, detail=f"Invalid MT5 account number: {credentials.get('account')}")
         
+        # Free tier restriction check
+        sub_tier = user.get("subscription_tier", "free") if user else "free"
+        fetch_days = 90 if sub_tier != "free" else 30
+        
         # Fetch trades from MT5
         try:
             trades = fetch_mt5_trades(
                 account=account_number,
                 password=credentials.get("password"),
                 server=credentials.get("server"),
-                days=90
+                days=fetch_days
             )
         except Exception as mt5_error:
             error_msg = str(mt5_error)
@@ -606,7 +635,23 @@ def fetch_mt5_trades_endpoint(user_id: str, db: Database = Depends(get_db)):
 # ----------------- Trade Statistics -----------------
 @app.get("/trades/stats/user/{user_id}")
 def get_trade_statistics(user_id: str, db: Database = Depends(get_db)):
-    trades = get_trades(db, user_id, 0, 10000)
+    # Free tier restriction: Last 30 days only
+    user = get_user_by_id(db, user_id)
+    sub_tier = user.get("subscription_tier", "free") if user else "free"
+    
+    if sub_tier == "free":
+        limit_date = datetime.now() - timedelta(days=30)
+        query = {
+            "user_id": user_id,
+            "$or": [
+                {"close_time": {"$gte": limit_date}},
+                {"close_time": None, "open_time": {"$gte": limit_date}}
+            ]
+        }
+        trades = list(db.trades.find(query))
+    else:
+        trades = get_trades(db, user_id, 0, 10000)
+        
     if not trades:
         return {
             "message": "No trades found",

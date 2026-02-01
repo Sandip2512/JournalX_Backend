@@ -30,8 +30,23 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
         return cached
 
     print("DEBUG: Cache miss, fetching trades...")
+    
+    # Get user for subscription info
+    user = db.users.find_one({"user_id": user_id})
+    sub_tier = user.get("subscription_tier", "free") if user else "free"
+    
     # Fetch all trades for user
-    cursor = db.trades.find({"user_id": user_id}).sort("open_time", 1)
+    query = {"user_id": user_id}
+    
+    # Free tier restriction: Last 30 days only
+    if sub_tier == "free":
+        limit_date = datetime.now() - timedelta(days=30)
+        query["$or"] = [
+            {"close_time": {"$gte": limit_date}},
+            {"close_time": None, "open_time": {"$gte": limit_date}}
+        ]
+        
+    cursor = db.trades.find(query).sort("open_time", 1)
     trades = list(cursor)
     
     if not trades:
@@ -280,6 +295,10 @@ def get_calendar_stats(db: Database, user_id: str, month: int, year: int) -> Lis
     else:
         end_date = datetime(year, month + 1, 1)
         
+    # Free tier restriction: Last 30 days only
+    user = db.users.find_one({"user_id": user_id})
+    sub_tier = user.get("subscription_tier", "free") if user else "free"
+    
     query = {
         "user_id": user_id,
         "$or": [
@@ -288,6 +307,14 @@ def get_calendar_stats(db: Database, user_id: str, month: int, year: int) -> Lis
         ]
     }
     
+    if sub_tier == "free":
+        limit_date = datetime.now() - timedelta(days=30)
+        # If the requested period is older than 30 days, we must restrict it
+        # However, calendar usually shows by month. If we are in current month, we allow it but it will only show recent days.
+        # But if it's an OLD month, we filter it out.
+        if end_date < limit_date:
+            return [] # Older than 30 days
+            
     trades = list(db.trades.find(query))
     daily_stats = {}
     
@@ -310,6 +337,15 @@ def get_weekly_review_stats(db: Database, user_id: str, start_date: datetime = N
     if not start_date:
         start_date = end_date - timedelta(days=7)
     
+    # Free tier restriction: Last 30 days only
+    user = db.users.find_one({"user_id": user_id})
+    sub_tier = user.get("subscription_tier", "free") if user else "free"
+    
+    if sub_tier == "free":
+        limit_date = datetime.now() - timedelta(days=30)
+        if start_date < limit_date:
+            start_date = limit_date # Tighten the window
+            
     query = {
         "user_id": user_id,
         "$or": [
@@ -419,8 +455,20 @@ def get_diary_stats(db: Database, user_id: str, start_date: datetime, end_date: 
     - Calendar Grid Data
     """
     
-    # 1. Fetch ALL trades for streaks and all-time calculation
-    all_trades = list(db.trades.find({"user_id": user_id}))
+    # 1. Fetch trades for streaks and all-time calculation
+    # Free tier restriction: Last 30 days only
+    user = db.users.find_one({"user_id": user_id})
+    sub_tier = user.get("subscription_tier", "free") if user else "free"
+    
+    query = {"user_id": user_id}
+    if sub_tier == "free":
+        limit_date = datetime.now() - timedelta(days=30)
+        query["$or"] = [
+            {"close_time": {"$gte": limit_date}},
+            {"close_time": None, "open_time": {"$gte": limit_date}}
+        ]
+        
+    all_trades = list(db.trades.find(query))
     
     # Process all trades into daily P&L
     daily_pnl = {}
