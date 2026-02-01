@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from pymongo.database import Database
 from typing import List, Optional
 from app.mongo_database import get_db
-from app.routes.admin import get_current_user_role
+from app.routes.auth import get_current_user_role
 from app.crud.subscription_crud import (
     get_user_subscription, get_user_transactions, 
     get_all_transactions, get_sales_analytics, get_transaction

@@ -264,6 +264,18 @@ def debug_mt5_credentials(user_id: str, db: Database = Depends(get_db)):
     else:
         return {"exists": False, "message": "No MT5 credentials found"}
 
+@app.get("/debug/routes")
+def list_routes():
+    import json
+    routes = []
+    for route in app.routes:
+        routes.append({
+            "path": route.path,
+            "name": route.name,
+            "methods": list(route.methods) if hasattr(route, "methods") else []
+        })
+    return {"routes": routes}
+
 # ----------------- Auth Routes -----------------
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 
