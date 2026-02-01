@@ -97,10 +97,15 @@ def download_invoice(
     if user.get("role") != "admin" and transaction["user_id"] != user["user_id"]:
         raise HTTPException(status_code=403, detail="Not authorized to access this invoice")
     
-    pdf_buffer = invoice_service.generate_invoice_pdf(transaction)
-    
-    return StreamingResponse(
-        pdf_buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=invoice_{transaction['invoice_number']}.pdf"}
-    )
+    try:
+        pdf_buffer = invoice_service.generate_invoice_pdf(transaction)
+        
+        invoice_name = transaction.get('invoice_number', transaction_id)
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=invoice_{invoice_name}.pdf"}
+        )
+    except Exception as e:
+        print(f"Error generating invoice: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating invoice PDF: {str(e)}")

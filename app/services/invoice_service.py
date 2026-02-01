@@ -24,7 +24,8 @@ class InvoiceService:
         
         # Header
         elements.append(Paragraph("JournalX Invoice", title_style))
-        elements.append(Paragraph(f"Invoice Number: {transaction['invoice_number']}", styles['Normal']))
+        invoice_num = transaction.get('invoice_number', 'N/A')
+        elements.append(Paragraph(f"Invoice Number: {invoice_num}", styles['Normal']))
         
         # Handle payment_date - could be datetime or string
         payment_date = transaction.get('payment_date')
@@ -39,11 +40,12 @@ class InvoiceService:
         elements.append(Spacer(1, 20))
         
         # Seller & Customer Details
+        billing = transaction.get('billing_details', {})
         data = [
             ["Seller:", "Bill To:"],
-            ["JournalX Trading Inc.", transaction['billing_details'].get('full_name', 'Customer')],
-            ["123 Trading St.", transaction['billing_details'].get('email', '')],
-            ["Finance City, FC 12345", transaction['billing_details'].get('address', '')]
+            ["JournalX Trading Inc.", billing.get('full_name', 'Customer')],
+            ["123 Trading St.", billing.get('email', '')],
+            ["Finance City, FC 12345", billing.get('address', '')]
         ]
         
         details_table = Table(data, colWidths=[250, 250])
@@ -56,9 +58,9 @@ class InvoiceService:
         elements.append(Spacer(1, 40))
         
         # Subscription Details Table
-        plan_name = transaction['billing_details'].get('plan_name', 'Monthly')
-        payment_method = transaction['billing_details'].get('payment_method', 'card')
-        coupon_code = transaction['billing_details'].get('coupon_code', '')
+        plan_name = billing.get('plan_name', 'Monthly')
+        payment_method = billing.get('payment_method', 'card')
+        coupon_code = billing.get('coupon_code', '')
         
         total_amount = transaction.get('total_amount', 0.0)
         discount_amount = transaction.get('discount_amount', 0.0)
@@ -66,7 +68,7 @@ class InvoiceService:
         
         sub_data = [
             ["Description", "Amount"],
-            [f"Subscription Plan: {plan_name.title()}", f"${total_amount:.2f}"],
+            [f"Subscription Plan: {str(plan_name).title()}", f"${total_amount:.2f}"],
         ]
         
         # Add discount row if applicable

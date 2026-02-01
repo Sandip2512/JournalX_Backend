@@ -55,14 +55,36 @@ def update_subscription(db: Database, sub_id: str, update_data: dict):
 # ------------------- Transaction CRUD -------------------
 
 def get_transaction(db: Database, transaction_id: str):
-    return db.transactions.find_one({"id": transaction_id})
+    # Check by custom 'id' first
+    tx = db.transactions.find_one({"id": transaction_id})
+    if tx:
+        return tx
+    
+    # Try by MongoDB '_id'
+    try:
+        from bson.objectid import ObjectId
+        tx = db.transactions.find_one({"_id": ObjectId(transaction_id)})
+        if tx:
+            return tx
+    except Exception:
+        pass
+        
+    return db.transactions.find_one({"_id": transaction_id})
 
 def get_user_transactions(db: Database, user_id: str):
-    return list(db.transactions.find({"user_id": user_id}).sort("payment_date", -1))
+    transactions = list(db.transactions.find({"user_id": user_id}).sort("payment_date", -1))
+    for tx in transactions:
+        if not tx.get("id") and "_id" in tx:
+            tx["id"] = str(tx["_id"])
+    return transactions
 
 def get_all_transactions(db: Database, skip: int = 0, limit: int = 100, filters: dict = None):
     query = filters or {}
-    return list(db.transactions.find(query).sort("payment_date", -1).skip(skip).limit(limit))
+    transactions = list(db.transactions.find(query).sort("payment_date", -1).skip(skip).limit(limit))
+    for tx in transactions:
+        if not tx.get("id") and "_id" in tx:
+            tx["id"] = str(tx["_id"])
+    return transactions
 
 def create_transaction(db: Database, tx_data: dict):
     if "_id" in tx_data:
