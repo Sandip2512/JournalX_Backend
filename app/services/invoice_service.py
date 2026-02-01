@@ -14,16 +14,23 @@ class InvoiceService:
         
         # Define Brand Colors
         brand_blue = colors.HexColor("#3b82f6")
-        brand_slate = colors.HexColor("#1e293b")
+        brand_slate = colors.HexColor("#0f172a") # Slate 900 for 'Journal'
         brand_light_bg = colors.HexColor("#f8fafc")
         
         # Custom styles
-        title_style = ParagraphStyle(
-            'InvoiceTitle',
+        journal_style = ParagraphStyle(
+            'JournalStyle',
+            parent=styles['Heading1'],
+            fontSize=32,
+            textColor=brand_slate,
+            fontName='Helvetica-Bold'
+        )
+        
+        x_style = ParagraphStyle(
+            'XStyle',
             parent=styles['Heading1'],
             fontSize=32,
             textColor=brand_blue,
-            spaceAfter=30,
             fontName='Helvetica-Bold'
         )
         
@@ -46,6 +53,17 @@ class InvoiceService:
             spaceAfter=12
         )
         
+        # Helper for the logo
+        def get_logo():
+            return Table([[
+                Paragraph("Journal", journal_style),
+                Paragraph("X", x_style)
+            ]], colWidths=[105, 30], style=TableStyle([
+                ('LEFTPADDING', (0,0), (-1,-1), 0),
+                ('RIGHTPADDING', (0,0), (-1,-1), 0),
+                ('VALIGN', (0,0), (-1,-1), 'BASELINE'),
+            ]))
+
         small_style = ParagraphStyle(
             'SmallStyle',
             parent=styles['Normal'],
@@ -56,8 +74,7 @@ class InvoiceService:
         
         elements = []
         
-        # --- Top Header Section (Two Columns) ---
-        # Col 0: Brand/Title | Col 1: Invoice Metadata
+        # --- Top Header Section ---
         invoice_num = transaction.get('invoice_number', 'N/A')
         payment_date = transaction.get('payment_date')
         if isinstance(payment_date, str):
@@ -69,7 +86,7 @@ class InvoiceService:
 
         header_data = [
             [
-                Paragraph("JournalX", title_style),
+                get_logo(),
                 [
                     Paragraph("Invoice Number", label_style),
                     Paragraph(invoice_num, value_style),
@@ -85,7 +102,10 @@ class InvoiceService:
             ('ALIGN', (1,0), (1,0), 'RIGHT'),
         ]))
         elements.append(header_table)
-        elements.append(Spacer(1, 40))
+        
+        # Decorative line
+        elements.append(Spacer(1, 10))
+        elements.append(HRFlowable(width="100%", thickness=0.5, color=brand_light_bg, spaceAfter=30))
         
         # --- Billing Info Section ---
         billing = transaction.get('billing_details', {})
@@ -100,7 +120,7 @@ class InvoiceService:
                 [
                     Paragraph("Bill To", label_style),
                     Paragraph(billing.get('full_name', 'Customer'), value_style),
-                    Paragraph(billing.get('email', ''), value_style),
+                    Paragraph(billing.get('email', 'N/A'), value_style),
                     Paragraph(billing.get('address', 'N/A'), value_style),
                 ]
             ]
@@ -122,7 +142,6 @@ class InvoiceService:
         discount_amount = transaction.get('discount_amount', 0.0)
         amount_paid = transaction.get('amount_paid', total_amount)
         
-        # Table Header
         sub_data = [
             [Paragraph("Description", label_style), Paragraph("Amount", label_style)],
         ]
@@ -145,24 +164,38 @@ class InvoiceService:
         sub_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), brand_light_bg),
             ('LINEBELOW', (0,0), (-1,0), 0.5, colors.lightgrey),
-            ('BOTTOMPADDING', (0,0), (-1,0), 8),
-            ('TOPPADDING', (1,1), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,0), (-1,0), 10),
+            ('TOPPADDING', (1,1), (-1,-1), 10),
             ('ALIGN', (1,0), (1,-1), 'RIGHT'),
         ]))
         elements.append(sub_table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 30))
         
-        # --- Totals Section ---
-        totals_data = [
-            ["", Paragraph("Total Paid", label_style)],
-            ["", Paragraph(f"${amount_paid:.2f}", title_style)]
-        ]
+        # --- Totals Section (Fixed Overlap) ---
+        totals_data = []
+        
+        # Promotion note if applicable
         if payment_method == 'coupon' and coupon_code:
-            totals_data.append(["", Paragraph(f"Promotion: {coupon_code}", label_style)])
+             totals_data.append(["", Paragraph(f"Payment Method: Promotional Code ({coupon_code})", label_style)])
+        
+        totals_data.append(["", Paragraph("Total Paid", label_style)])
+        
+        # Large Total Value
+        total_paid_style = ParagraphStyle(
+            'TotalPaidStyle',
+            parent=styles['Heading1'],
+            fontSize=36,
+            textColor=brand_blue,
+            fontName='Helvetica-Bold',
+            alignment=2 # Right align
+        )
+        totals_data.append(["", Paragraph(f"${amount_paid:.2f}", total_paid_style)])
             
-        totals_table = Table(totals_data, colWidths=[350, 150])
+        totals_table = Table(totals_data, colWidths=[300, 200])
         totals_table.setStyle(TableStyle([
             ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('BOTTOMPADDING', (1,0), (1,-1), 10),
         ]))
         elements.append(totals_table)
         
