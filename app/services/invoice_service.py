@@ -58,11 +58,11 @@ class InvoiceService:
             return Table([[
                 Paragraph("Journal", journal_style),
                 Paragraph("X", x_style)
-            ]], colWidths=[105, 30], style=TableStyle([
+            ]], colWidths=[130, 30], style=TableStyle([
                 ('LEFTPADDING', (0,0), (-1,-1), 0),
                 ('RIGHTPADDING', (0,0), (-1,-1), 0),
                 ('VALIGN', (0,0), (-1,-1), 'BASELINE'),
-            ]))
+            ]), hAlign='LEFT')
 
         small_style = ParagraphStyle(
             'SmallStyle',
