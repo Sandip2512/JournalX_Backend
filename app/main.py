@@ -248,6 +248,10 @@ def debug_user(user_id: str, db: Database = Depends(get_db)):
     else:
         return {"exists": False, "message": f"User {user_id} not found"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "version": "1.0.1", "timestamp": datetime.now()}
+
 @app.get("/debug/mt5-credentials/{user_id}")
 def debug_mt5_credentials(user_id: str, db: Database = Depends(get_db)):
     credentials = get_mt5_credentials(db, user_id)
