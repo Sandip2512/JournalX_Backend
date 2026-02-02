@@ -11,13 +11,5 @@
             "src": "/(.*)",
             "dest": "app/main.py"
         }
-    ],
-    "env": {
-        "MONGODB_URI": "@mongodb_uri",
-        "JWT_SECRET": "@jwt_secret",
-        "JWT_ALGORITHM": "@jwt_algorithm",
-        "ACCESS_TOKEN_EXPIRE_MINUTES": "1440",
-        "SENDGRID_API_KEY": "@sendgrid_api_key",
-        "GEMINI_API_KEY": "@gemini_api_key"
-    }
+    ]
 }

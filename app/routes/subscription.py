@@ -66,9 +66,12 @@ def redeem_coupon_code(
     db: Database = Depends(get_db),
     user: dict = Depends(get_current_user_role)
 ):
+    print(f"🎟️ Coupon redemption attempt: User {user['user_id']} with code {coupon_data.code}")
     result = redeem_coupon(db, user["user_id"], coupon_data.code)
     if not result["success"]:
+        print(f"❌ Coupon redemption failed: {result['message']}")
         raise HTTPException(status_code=400, detail=result["message"])
+    print(f"✅ Coupon redemption successful: {result['message']}")
     return result
 
 @router.get("/my-transactions", response_model=List[dict])
