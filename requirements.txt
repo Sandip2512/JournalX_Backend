@@ -14,5 +14,4 @@ requests
 reportlab
 matplotlib
 Pillow
-google-generativeai
 dnspython
