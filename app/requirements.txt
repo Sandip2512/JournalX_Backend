@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pymongo
+python-dotenv
+pydantic
+pydantic[email]
+python-jose[cryptography]
+python-multipart
+passlib[bcrypt]
+pandas
+numpy
+sendgrid
+requests
+reportlab
+matplotlib
+Pillow
+dnspython
