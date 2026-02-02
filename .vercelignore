@@ -1,0 +1,24 @@
+# Exclude local database
+trading_journal.db
+
+# Exclude local environment files
+.env
+.env.*
+
+# Exclude all top-level scripts (debug, check, fix, etc.)
+/*.py
+!/app/**/*.py
+!/app/main.py
+
+# Keep requirements.txt and vercel.json (Vercel needs these)
+!requirements.txt
+!vercel.json
+
+# Exclude temporary folders
+generated_reports/
+__pycache__/
+*.pyc
+
+# Exclude git
+.git/
+.gitignore
