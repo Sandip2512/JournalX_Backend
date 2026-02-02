@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 load_dotenv()
-SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
+# Support both SECRET_KEY (local) and JWT_SECRET (Vercel configuration)
+SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET") or "fallback_secret"
+# Support both ALGORITHM (local) and JWT_ALGORITHM (Vercel configuration)
+ALGORITHM = os.getenv("ALGORITHM") or os.getenv("JWT_ALGORITHM") or "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
 
 router = APIRouter()

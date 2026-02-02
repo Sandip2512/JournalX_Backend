@@ -32,7 +32,8 @@ class MongoDB:
                     logger.warning("⚠️ Lost connection to MongoDB. Reconnecting...")
                     self.client = None
 
-            mongo_uri = os.getenv("MONGO_URI")
+            # Support both MONGO_URI (local) and MONGODB_URI (Vercel/Atlas default)
+            mongo_uri = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI")
             db_name = os.getenv("DB_NAME", "JournalX")
             
             if not mongo_uri:
