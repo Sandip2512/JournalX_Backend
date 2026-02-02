@@ -14,7 +14,11 @@ from reportlab.lib.units import inch
 
 class PDFReportService:
     def __init__(self):
-        self.reports_dir = os.path.join(os.getcwd(), "generated_reports")
+        # Use /tmp on Vercel, current dir locally
+        if os.environ.get('VERCEL'):
+            self.reports_dir = "/tmp/generated_reports"
+        else:
+            self.reports_dir = os.path.join(os.getcwd(), "generated_reports")
         os.makedirs(self.reports_dir, exist_ok=True)
         self.styles = getSampleStyleSheet()
         

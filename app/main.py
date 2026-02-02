@@ -1,5 +1,10 @@
 import sys
 import os
+
+# Fix for Vercel read-only file system
+if os.environ.get('VERCEL'):
+    os.environ['MPLCONFIGDIR'] = '/tmp/matplotlib'
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, Depends, HTTPException, Request
