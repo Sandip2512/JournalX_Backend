@@ -50,6 +50,7 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     trades = list(cursor)
     
     if not trades:
+        print("⚠️ No trades found for user, returning empty analytics")
         return {
             "beginner": {
                 "total_pl": 0.0,
@@ -70,6 +71,8 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
                 "mae_mfe": []
             }
         }
+    
+    print(f"✅ Found {len(trades)} trades, processing analytics...")
 
     # Convert to DataFrame for easier analysis
     data = []
@@ -169,6 +172,8 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     win_rate = (df['win'].sum() / total_trades) * 100 if total_trades > 0 else 0
     avg_win = df[df['win'] == 1]['net_profit'].mean() if df['win'].sum() > 0 else 0
     avg_loss = df[df['loss'] == 1]['net_profit'].mean() if df['loss'].sum() > 0 else 0
+    
+    print(f"📊 Analytics Summary: Total Trades={total_trades}, Total P&L={total_pl:.2f}, Win Rate={win_rate:.1f}%")
     
     # Avg Risk
     avg_risk = abs(avg_loss) if avg_loss != 0 else 0
@@ -293,6 +298,7 @@ def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
         "advanced": advanced
     }
     
+    print(f"✅ Analytics calculation complete for {user_id}")
     cache_analytics(user_id, result)
     return result
 
