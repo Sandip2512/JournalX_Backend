@@ -47,6 +47,10 @@ def get_user_trade_stats(user_id: str, db: Database = Depends(get_db)):
                 "max_loss": 0.0,
                 "closed_trades": 0,
                 "profit_factor": 0.0,
+                "total_profit": 0.0,
+                "total_loss": 0.0,
+                "winning_trades": 0,
+                "losing_trades": 0,
                 "is_free_tier": is_free_tier
             }
         
@@ -92,6 +96,10 @@ def get_user_trade_stats(user_id: str, db: Database = Depends(get_db)):
             "max_loss": round(max_loss, 2),
             "closed_trades": closed_trades,
             "profit_factor": round(profit_factor, 2),
+            "total_profit": round(total_wins, 2),
+            "total_loss": round(total_losses, 2),
+            "winning_trades": win_count,
+            "losing_trades": len(losses),
             "is_free_tier": is_free_tier
         }
         
