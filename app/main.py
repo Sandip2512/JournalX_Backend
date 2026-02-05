@@ -48,7 +48,7 @@ from app.schemas.mt5_schema import MT5CredentialsCreate, MT5CredentialsResponse
 from app.routes import (
     auth, admin, admin_users, admin_trades, admin_system, admin_analytics,
     announcements, analytics, subscription, reports, posts, notifications,
-    mistakes, leaderboard, goals, chat, mt5, discipline, users, trades
+    mistakes, leaderboard, goals, chat, mt5, discipline, users, trades, friends
 )
 
 # Initialize Logging
@@ -157,6 +157,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
 app.include_router(chat.router, prefix="/api/chat", tags=["AI Chat"])
 app.include_router(mistakes.router, prefix="/api/mistakes", tags=["Mistakes"])
+app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
 
 # ----------------- Direct Routes (Legacy/Core) -----------------
 

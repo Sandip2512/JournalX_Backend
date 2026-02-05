@@ -57,8 +57,9 @@ def get_notifications(
             "title": p.get("title", "Notification"),
             "content": p.get("content", ""),
             "created_at": p.get("created_at"),
-            "type": "personal",
-            "is_read": p.get("is_read", False)
+            "type": p.get("type", "personal"),
+            "is_read": p.get("is_read", False),
+            "metadata": p.get("metadata", None)
         })
     
     # Sort combined by created_at desc

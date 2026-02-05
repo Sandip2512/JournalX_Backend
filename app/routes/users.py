@@ -8,6 +8,19 @@ from app.schemas.user_schema import UserResponse, UserUpdate
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+@router.get("/{user_id}/info")
+def get_user_info(user_id: str, db: Database = Depends(get_db)):
+    """Get minimal user info (name, id) for UI display"""
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "user_id": user.get("user_id"),
+        "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "Anonymous",
+        "first_name": user.get("first_name"),
+        "last_name": user.get("last_name")
+    }
+
 @router.put("/profile/{user_id}", response_model=UserResponse)
 def update_profile(user_id: str, user_update: UserUpdate, db: Database = Depends(get_db)):
     """Update user profile information"""
