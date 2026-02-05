@@ -41,6 +41,45 @@ def change_user_password(user_id: str, password_data: ChangePasswordRequest, db:
         raise HTTPException(status_code=400, detail="Invalid current password")
         
     return {"message": "Password changed successfully"}
+@router.get("/{user_id}/mt5-status")
+def get_mt5_status(user_id: str, db: Database = Depends(get_db)):
+    """Get MT5 connection status for a user"""
+    try:
+        # Check if user exists
+        user = get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get MT5 credentials
+        from app.crud.mt5_crud import get_mt5_credentials
+        credentials = get_mt5_credentials(db, user_id)
+        
+        if not credentials:
+            return {
+                "connected": False,
+                "account": None,
+                "server": None,
+                "last_fetch": None,
+                "balance": 0.0,
+                "equity": 0.0
+            }
+        
+        # Return MT5 status
+        return {
+            "connected": True,
+            "account": credentials.get("account"),
+            "server": credentials.get("server"),
+            "last_fetch": credentials.get("last_fetch"),
+            "balance": credentials.get("balance", 0.0),
+            "equity": credentials.get("equity", 0.0)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching MT5 status for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching MT5 status: {str(e)}")
+
 @router.get("/community/members")
 def get_community_members(db: Database = Depends(get_db)):
     """Fetch all users to display in the community member list"""

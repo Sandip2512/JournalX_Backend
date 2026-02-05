@@ -48,7 +48,7 @@ from app.schemas.mt5_schema import MT5CredentialsCreate, MT5CredentialsResponse
 from app.routes import (
     auth, admin, admin_users, admin_trades, admin_system, admin_analytics,
     announcements, analytics, subscription, reports, posts, notifications,
-    mistakes, leaderboard, goals, chat, mt5, discipline, users
+    mistakes, leaderboard, goals, chat, mt5, discipline, users, trades
 )
 
 # Initialize Logging
@@ -140,6 +140,7 @@ def health_check():
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(subscription.router, prefix="/api/subscriptions", tags=["Subscriptions"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
+app.include_router(trades.router, prefix="/trades", tags=["Trades"])
 app.include_router(mt5.router, prefix="/mt5", tags=["MT5"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(admin_users.router, prefix="/api/admin/users", tags=["Admin Users"])
