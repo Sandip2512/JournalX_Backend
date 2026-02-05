@@ -106,3 +106,28 @@ def get_user_trade_stats(user_id: str, db: Database = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error calculating trade stats for user {user_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error calculating stats: {str(e)}")
+
+@router.delete("/trade/{trade_no}")
+def delete_trade(trade_no: int, db: Database = Depends(get_db)):
+    """
+    Delete a trade by trade_no.
+    """
+    try:
+        # Find the trade first to verify it exists
+        trade = db.trades.find_one({"trade_no": trade_no})
+        if not trade:
+            raise HTTPException(status_code=404, detail="Trade not found")
+        
+        # Delete the trade
+        result = db.trades.delete_one({"trade_no": trade_no})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Trade not found")
+        
+        return {"message": "Trade deleted successfully", "trade_no": trade_no}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting trade {trade_no}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error deleting trade: {str(e)}")
