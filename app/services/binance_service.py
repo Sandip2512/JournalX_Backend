@@ -1,4 +1,3 @@
-import httpx
 import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
@@ -28,34 +27,12 @@ class BinanceService:
         end_time: Optional[int] = None, 
         limit: int = 500
     ) -> List[List[Any]]:
-        """
-        Fetch kline/candlestick data from Binance.
-        
-        Args:
-            symbol: Symbol string (e.g., BTCUSDT)
-            interval: Kline interval (e.g., 1m, 1h, 1d)
-            start_time: Timestamp in ms
-            end_time: Timestamp in ms
-            limit: Number of results
-            
-        Returns:
-            List of klines: [
-                [
-                    1499040000000,      // Open time
-                    "0.01634790",       // Open
-                    "0.80000000",       // High
-                    "0.01575800",       // Low
-                    "0.01577100",       // Close
-                    "148976.11427815",  // Volume
-                    1499644799999,      // Close time
-                    "2434.19055334",    // Quote asset volume
-                    308,                // Number of trades
-                    "1756.87402397",    // Taker buy base asset volume
-                    "28.46694368",      // Taker buy quote asset volume
-                    "17928899.62484339" // Ignore
-                ]
-            ]
-        """
+        try:
+            import httpx
+        except ImportError:
+            logger.error("httpx is not installed")
+            raise Exception("Market data service unavailable (httpx missing)")
+
         # Try to map symbol if needed
         binance_symbol = cls.SYMBOL_MAPPING.get(symbol, symbol.replace("/", "").replace(" ", ""))
         
