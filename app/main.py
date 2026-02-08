@@ -58,6 +58,10 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI
 app = FastAPI(title="JournalX Trading Backend")
 
+@app.get("/api/version")
+async def get_version():
+    return {"version": "v2.1-httpx-fix", "timestamp": "2026-02-09 02:10:00"}
+
 # version for verification
 APP_VERSION = "v1.2.0-CONSOLIDATED-FIX"
 
