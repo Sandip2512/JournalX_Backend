@@ -36,7 +36,7 @@ async def get_klines(
         for k in data:
             if not isinstance(k, list) or len(k) < 6: continue
             transformed_data.append({
-                "time": k[0] / 1000, # Convert to seconds for lightweight-charts
+                "time": int(k[0] / 1000), # Unix timestamp in seconds (int)
                 "open": float(k[1]),
                 "high": float(k[2]),
                 "low": float(k[3]),

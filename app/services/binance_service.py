@@ -98,20 +98,22 @@ class BinanceService:
             
             ku_params = {
                 "symbol": ku_symbol,
-                "type": k_interval,
-                "startAt": int(start_time / 1000) if start_time else 0,
-                "endAt": int(end_time / 1000) if end_time else int(datetime.now().timestamp())
+                "type": k_interval
             }
+            if start_time: 
+                ku_params["startAt"] = int(start_time / 1000)
+            if end_time: 
+                ku_params["endAt"] = int(end_time / 1000)
             
-            logger.info(f"Calling KuCoin: {ku_symbol} | {k_interval}")
+            logger.info(f"Calling KuCoin: {ku_symbol} | {k_interval} | {ku_params.get('startAt')}")
             response = requests.get(cls.KUCOIN_URL, params=ku_params, timeout=10)
             if response.status_code == 200:
                 resp_json = response.json()
                 data = resp_json.get("data", [])
                 if data and len(data) > 0:
-                    # KuCoin format: [time, open, close, high, low, volume, turnover]
-                    # We need: [time*1000, open, high, low, close, volume]
-                    return [[int(k[0])*1000, k[1], k[3], k[4], k[2], k[5]] for k in data[::-1]]
+                    # Map to [time*1000, open, high, low, close, volume]
+                    # Ensure all values are correctly typed
+                    return [[int(k[0])*1000, float(k[1]), float(k[3]), float(k[4]), float(k[2]), float(k[5])] for k in data[::-1]]
                 else:
                     last_error = f"KuCoin empty: {resp_json.get('msg')}"
         except Exception as e:

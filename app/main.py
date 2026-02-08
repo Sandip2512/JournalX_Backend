@@ -61,8 +61,8 @@ app = FastAPI(title="JournalX Trading Backend")
 @app.get("/api/version")
 async def get_version():
     return {
-        "version": "v2.7-debug-mode", 
-        "timestamp": "2026-02-09 03:15:00"
+        "version": "v2.8-final-fix", 
+        "timestamp": "2026-02-09 03:18:00"
     }
 
 @app.get("/api/debug-market")
