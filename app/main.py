@@ -61,9 +61,38 @@ app = FastAPI(title="JournalX Trading Backend")
 @app.get("/api/version")
 async def get_version():
     return {
-        "version": "v2.6-robust-fallback", 
-        "timestamp": "2026-02-09 03:10:00"
+        "version": "v2.7-debug-mode", 
+        "timestamp": "2026-02-09 03:15:00"
     }
+
+@app.get("/api/debug-market")
+async def debug_market(symbol: str = "BTCUSDT"):
+    import requests
+    results = {}
+    
+    # 1. Test Standard Binance
+    try:
+        r = requests.get("https://api.binance.com/api/v3/klines", params={"symbol": symbol, "interval": "1h", "limit": 1}, timeout=5)
+        results["binance_std"] = {"status": r.status_code, "text_preview": r.text[:200]}
+    except Exception as e:
+        results["binance_std"] = {"error": str(e)}
+
+    # 2. Test GCP Binance
+    try:
+        r = requests.get("https://api-gcp.binance.com/api/v3/klines", params={"symbol": symbol, "interval": "1h", "limit": 1}, timeout=5)
+        results["binance_gcp"] = {"status": r.status_code, "text_preview": r.text[:200]}
+    except Exception as e:
+        results["binance_gcp"] = {"error": str(e)}
+
+    # 3. Test KuCoin
+    try:
+        ku_sym = "BTC-USDT"
+        r = requests.get("https://api.kucoin.com/api/v1/market/candles", params={"symbol": ku_sym, "type": "1hour"}, timeout=5)
+        results["kucoin"] = {"status": r.status_code, "text_preview": r.text[:200]}
+    except Exception as e:
+        results["kucoin"] = {"error": str(e)}
+
+    return results
 
 # version for verification
 APP_VERSION = "v1.2.0-CONSOLIDATED-FIX"
