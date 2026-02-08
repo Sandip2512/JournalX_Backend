@@ -41,14 +41,14 @@ from app.schemas.user_schema import (
     UserCreate, UserBase, UserResponse,
     UserLogin, ForgotPasswordRequest, ResetPasswordRequest
 )
-from app.schemas.trade_schema import TradeCreate, TradeBase
+from app.schemas.trade_schema import TradeBase
 from app.schemas.mt5_schema import MT5CredentialsCreate, MT5CredentialsResponse
 
 # Import route modules
 from app.routes import (
     auth, admin, admin_users, admin_trades, admin_system, admin_analytics,
     announcements, analytics, subscription, reports, posts, notifications,
-    mistakes, leaderboard, goals, chat, mt5, discipline, users, trades, friends
+    mistakes, leaderboard, goals, chat, mt5, discipline, users, trades, friends, market_data
 )
 
 # Initialize Logging
@@ -158,6 +158,7 @@ app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
 app.include_router(chat.router, prefix="/api/chat", tags=["AI Chat"])
 app.include_router(mistakes.router, prefix="/api/mistakes", tags=["Mistakes"])
 app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
+app.include_router(market_data.router, prefix="/api/market-data", tags=["Market Data"])
 
 # ----------------- Direct Routes (Legacy/Core) -----------------
 

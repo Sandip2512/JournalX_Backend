@@ -4,8 +4,22 @@ from app.mongo_database import get_db
 from datetime import datetime, timedelta
 import logging
 
+from app.schemas.trade_schema import TradeCreate
+from app.crud.trade_crud import create_trade
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+@router.post("/", response_model=dict)
+def post_trade(trade: TradeCreate, db: Database = Depends(get_db)):
+    """Create a manual trade entry."""
+    try:
+        trade_data = trade.model_dump()
+        result = create_trade(db, trade_data)
+        return result
+    except Exception as e:
+        logger.error(f"Error creating trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/stats/user/{user_id}")
 def get_user_trade_stats(user_id: str, db: Database = Depends(get_db)):
