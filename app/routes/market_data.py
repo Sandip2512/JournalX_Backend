@@ -18,6 +18,7 @@ async def get_klines(
     Get kline data for a symbol from Binance.
     """
     try:
+        logger.info(f"Market request: {symbol} | {interval} | {start_time}-{end_time}")
         data = await binance_service.get_klines(
             symbol=symbol,
             interval=interval,
@@ -26,9 +27,14 @@ async def get_klines(
             limit=limit
         )
         
+        logger.info(f"Service returned {len(data)} items")
+        if not data:
+            logger.warning(f"Empty data from pool for {symbol}")
+            
         # Transform Binance klines into a more chart-friendly format
         transformed_data = []
         for k in data:
+            if not isinstance(k, list) or len(k) < 6: continue
             transformed_data.append({
                 "time": k[0] / 1000, # Convert to seconds for lightweight-charts
                 "open": float(k[1]),

@@ -61,8 +61,8 @@ app = FastAPI(title="JournalX Trading Backend")
 @app.get("/api/version")
 async def get_version():
     return {
-        "version": "v2.4-geoblock-fix", 
-        "timestamp": "2026-02-09 02:45:00"
+        "version": "v2.5-diagnostics", 
+        "timestamp": "2026-02-09 02:56:00"
     }
 
 # version for verification
