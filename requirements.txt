@@ -10,9 +10,9 @@ passlib[bcrypt]
 pandas
 numpy
 sendgrid
-requests
+requests>=2.31.0
 reportlab
 matplotlib
 Pillow
 dnspython
-httpx
+httpx>=0.25.0
