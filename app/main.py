@@ -60,23 +60,9 @@ app = FastAPI(title="JournalX Trading Backend")
 
 @app.get("/api/version")
 async def get_version():
-    libs = {}
-    try:
-        import httpx
-        libs["httpx"] = "available"
-    except ImportError:
-        libs["httpx"] = "missing"
-    
-    try:
-        import requests
-        libs["requests"] = "available"
-    except ImportError:
-        libs["requests"] = "missing"
-
     return {
-        "version": "v2.2-lib-check", 
-        "timestamp": "2026-02-09 02:35:00",
-        "libraries": libs
+        "version": "v2.3-requests-refactor", 
+        "timestamp": "2026-02-09 02:38:00"
     }
 
 # version for verification

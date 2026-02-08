@@ -1,4 +1,5 @@
 import logging
+import requests
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
@@ -19,7 +20,7 @@ class BinanceService:
     }
 
     @classmethod
-    async def get_klines(
+    def get_klines_sync(
         cls, 
         symbol: str, 
         interval: str = "1h", 
@@ -27,12 +28,9 @@ class BinanceService:
         end_time: Optional[int] = None, 
         limit: int = 500
     ) -> List[List[Any]]:
-        try:
-            import httpx
-        except ImportError:
-            logger.error("httpx is not installed")
-            raise Exception("Market data service unavailable (httpx missing)")
-
+        """
+        Synchronous kline fetch using requests.
+        """
         # Try to map symbol if needed
         binance_symbol = cls.SYMBOL_MAPPING.get(symbol, symbol.replace("/", "").replace(" ", ""))
         
@@ -48,24 +46,42 @@ class BinanceService:
             params["endTime"] = end_time
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{cls.BASE_URL}/api/v3/klines", params=params)
-                response.raise_for_status()
-                return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Binance API error: {e.response.text}")
+            response = requests.get(f"{cls.BASE_URL}/api/v3/klines", params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Binance API error: {str(e)}")
             # If mapping failed, try common patterns
-            if e.response.status_code == 400 and "Invalid symbol" in e.response.text:
+            if response.status_code == 400 and "Invalid symbol" in response.text:
                 if "USD" in binance_symbol and "USDT" not in binance_symbol:
                     params["symbol"] = binance_symbol.replace("USD", "USDT")
-                    async with httpx.AsyncClient() as client:
-                        response = await client.get(f"{cls.BASE_URL}/api/v3/klines", params=params)
-                        if response.status_code == 200:
-                            return response.json()
+                    retry_response = requests.get(f"{cls.BASE_URL}/api/v3/klines", params=params, timeout=10)
+                    if retry_response.status_code == 200:
+                        return retry_response.json()
             
-            raise Exception(f"Failed to fetch data from Binance: {e.response.text}")
-        except Exception as e:
-            logger.error(f"Unexpected error fetching Binance data: {str(e)}")
-            raise
+            raise Exception(f"Failed to fetch data from Binance: {str(e)}")
+
+    @classmethod
+    async def get_klines(
+        cls, 
+        symbol: str, 
+        interval: str = "1h", 
+        start_time: Optional[int] = None, 
+        end_time: Optional[int] = None, 
+        limit: int = 500
+    ) -> List[List[Any]]:
+        """
+        Async wrapper for the sync method.
+        """
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as pool:
+            return await loop.run_in_executor(
+                pool, 
+                cls.get_klines_sync, 
+                symbol, interval, start_time, end_time, limit
+            )
 
 binance_service = BinanceService()
