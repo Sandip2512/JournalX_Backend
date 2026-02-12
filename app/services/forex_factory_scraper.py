@@ -2,8 +2,11 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
-from playwright.async_api import async_playwright, Page, Browser
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+    HAS_BS4 = True
+except ImportError:
+    HAS_BS4 = False
 import time
 import re
 
@@ -38,6 +41,12 @@ class ForexFactoryScraper:
             # Rate limiting
             await self._rate_limit()
             
+            try:
+                from playwright.async_api import async_playwright
+            except ImportError:
+                logger.warning("Playwright not found. Falling back to requests-based scrape.")
+                return await self._fallback_scrape(start_date)
+
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
                 page = await browser.new_page()
