@@ -48,7 +48,7 @@ from app.schemas.mt5_schema import MT5CredentialsCreate, MT5CredentialsResponse
 from app.routes import (
     auth, admin, admin_users, admin_trades, admin_system, admin_analytics,
     announcements, analytics, subscription, reports, posts, notifications,
-    mistakes, leaderboard, goals, chat, mt5, discipline, users, trades, friends, market_data
+    mistakes, leaderboard, goals, chat, mt5, discipline, users, trades, friends, market_data, calendar
 )
 
 # Initialize Logging
@@ -153,8 +153,14 @@ async def startup_event():
     try:
         db_client.connect()
         logger.info("✅ MongoDB connection established")
+        
+        # Start economic calendar auto-update scheduler
+        from app.services.economic_calendar_service import economic_calendar_service
+        economic_calendar_service.start_scheduler(db_client.db)
+        logger.info("✅ Economic calendar scheduler started")
+        
     except Exception as e:
-        logger.error(f"⚠️ Database connection failed: {str(e)}")
+        logger.error(f"⚠️ Startup error: {str(e)}")
 
 # ----------------- Base Routes -----------------
 @app.get("/")
@@ -195,6 +201,7 @@ app.include_router(chat.router, prefix="/api/chat", tags=["AI Chat"])
 app.include_router(mistakes.router, prefix="/api/mistakes", tags=["Mistakes"])
 app.include_router(friends.router, prefix="/api/friends", tags=["Friends"])
 app.include_router(market_data.router, prefix="/api/market-data", tags=["Market Data"])
+app.include_router(calendar.router, prefix="/api/calendar", tags=["Economic Calendar"])
 
 # ----------------- Direct Routes (Legacy/Core) -----------------
 

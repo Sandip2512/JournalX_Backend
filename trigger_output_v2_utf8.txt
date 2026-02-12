@@ -1,0 +1,133 @@
+﻿python : F:\Resumes\Data 
+Analyst Resume\Data Scientist 
+Resume\Documents\Documents\Jou
+rnal\Backend\trigger_update.py
+:57: DeprecationWarning: 
+There is no current event loop
+At line:1 char:1
++ python 
+Backend/trigger_update.py > 
+Backend/trigger_output_v2.txt 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo          : 
+    NotSpecified: (F:\Resume  
+  s\Data...rent event loop:   
+ String) [], RemoteExcepti    
+on
+    + FullyQualifiedErrorId : 
+    NativeCommandError
+ 
+  loop = 
+asyncio.get_event_loop()
+2026-02-13 01:48:59,588 - 
+__main__ - INFO - Connecting 
+to DB...
+2026-02-13 01:49:03,216 - 
+app.mongo_database - INFO - 
+\u2705 Successfully connected 
+to MongoDB Atlas (DB: 
+JournalX)
+2026-02-13 01:49:03,242 - 
+__main__ - INFO - Connected 
+to DB: JournalX
+2026-02-13 01:49:03,242 - 
+__main__ - INFO - Testing 
+fetch_fair_economy_events 
+directly...
+2026-02-13 01:49:03,512 - app.
+services.fair_economy_service 
+- INFO - Fetched 89 events 
+from FairEconomy
+2026-02-13 01:49:03,513 - 
+__main__ - INFO - Direct 
+fetch found 89 events.
+2026-02-13 01:49:03,513 - 
+__main__ - INFO - First 
+event: {'unique_id': 'ff_JPY_2
+0260208_0600_Lower_Hous', 
+'event_name': 'Lower House 
+Elections', 'event_date': 
+'2026-02-08', 
+'event_time_utc': 
+'2026-02-08T06:00:00', 
+'country': 'JPY', 'currency': 
+'JPY', 'impact_level': 
+'high', 'actual': '', 
+'forecast': '', 'previous': 
+'', 'status': 'released', 
+'fetched_at': 
+'2026-02-12T20:19:03.502857'}
+2026-02-13 01:49:03,513 - 
+__main__ - INFO - Triggering 
+auto_update_calendar...
+2026-02-13 01:49:03,513 - app.
+services.economic_calendar_ser
+vice - INFO - Starting 
+auto-update of economic 
+calendar
+2026-02-13 01:49:03,513 - app.
+services.economic_calendar_ser
+vice - INFO - Attempting to 
+fetch data from Finnhub API...
+2026-02-13 01:49:03,517 - 
+app.services.finnhub_service 
+- INFO - Fetching Finnhub 
+events from 2026-02-09 to 
+2026-02-15
+2026-02-13 01:49:04,556 - 
+app.services.finnhub_service 
+- WARNING - Finnhub Economic 
+Calendar access restricted 
+(403 Forbidden).
+2026-02-13 01:49:04,558 - app.
+services.economic_calendar_ser
+vice - WARNING - Finnhub 
+returned no events. Falling 
+back to FairEconomy XML 
+feed...
+2026-02-13 01:49:04,972 - app.
+services.fair_economy_service 
+- ERROR - Failed to fetch 
+FairEconomy feed: 429 Client 
+Error: Too Many Requests for 
+url: https://nfs.faireconomy.m
+edia/ff_calendar_thisweek.xml
+2026-02-13 01:49:04,973 - app.
+services.economic_calendar_ser
+vice - WARNING - No events 
+fetched from any source 
+(Finnhub or FairEconomy)
+2026-02-13 01:49:04,973 - 
+__main__ - INFO - Update 
+triggered.
+2026-02-13 01:49:05,008 - 
+__main__ - INFO - Total 
+events in DB: 97
+2026-02-13 01:49:05,049 - 
+__main__ - INFO - FairEconomy 
+events in DB: 89
+2026-02-13 01:49:05,088 - 
+__main__ - INFO - Event: ECB 
+President Lagarde Speaks 
+(2026-02-14) ID: ff_EUR_202602
+14_1630_ECB_Presid
+2026-02-13 01:49:05,089 - 
+__main__ - INFO - Event: 
+Mortgage Delinquencies 
+(2026-02-13) ID: ff_USD_202602
+13_1500_Mortgage_D
+2026-02-13 01:49:05,089 - 
+__main__ - INFO - Event: CPI 
+y/y (2026-02-13) ID: 
+ff_USD_20260213_1330_CPI_y/y
+2026-02-13 01:49:05,089 - 
+__main__ - INFO - Event: CPI 
+m/m (2026-02-13) ID: 
+ff_USD_20260213_1330_CPI_m/m
+2026-02-13 01:49:05,089 - 
+__main__ - INFO - Event: Core 
+CPI m/m (2026-02-13) ID: ff_US
+D_20260213_1330_Core_CPI_m

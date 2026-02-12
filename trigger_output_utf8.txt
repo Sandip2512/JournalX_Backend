@@ -1,0 +1,134 @@
+﻿python : F:\Resumes\Data 
+Analyst Resume\Data Scientist 
+Resume\Documents\Documents\Jou
+rnal\Backend\trigger_update.py
+:57: DeprecationWarning: 
+There is no current event loop
+At line:1 char:1
++ python 
+Backend/trigger_update.py > 
+Backend/trigger_output.txt 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo          : 
+    NotSpecified: (F:\Resume  
+  s\Data...rent event loop:   
+ String) [], RemoteExcepti    
+on
+    + FullyQualifiedErrorId : 
+    NativeCommandError
+ 
+  loop = 
+asyncio.get_event_loop()
+2026-02-13 01:45:59,674 - 
+__main__ - INFO - Connecting 
+to DB...
+2026-02-13 01:46:05,658 - 
+app.mongo_database - INFO - 
+\u2705 Successfully connected 
+to MongoDB Atlas (DB: 
+JournalX)
+2026-02-13 01:46:05,658 - 
+__main__ - INFO - Connected 
+to DB: JournalX
+2026-02-13 01:46:05,658 - 
+__main__ - INFO - Testing 
+fetch_fair_economy_events 
+directly...
+2026-02-13 01:46:06,000 - app.
+services.fair_economy_service 
+- ERROR - Failed to fetch 
+FairEconomy feed: 429 Client 
+Error: Too Many Requests for 
+url: https://nfs.faireconomy.m
+edia/ff_calendar_thisweek.xml
+2026-02-13 01:46:06,001 - 
+__main__ - INFO - Direct 
+fetch found 0 events.
+2026-02-13 01:46:06,001 - 
+__main__ - INFO - Triggering 
+auto_update_calendar...
+2026-02-13 01:46:06,001 - app.
+services.economic_calendar_ser
+vice - INFO - Starting 
+auto-update of economic 
+calendar
+2026-02-13 01:46:06,001 - app.
+services.economic_calendar_ser
+vice - INFO - Attempting to 
+fetch data from Finnhub API...
+2026-02-13 01:46:06,023 - app.
+services.economic_calendar_ser
+vice - ERROR - Auto-update 
+failed: type object 
+'datetime.datetime' has no 
+attribute 'timedelta'
+Traceback (most recent call 
+last):
+  File "F:\Resumes\Data 
+Analyst Resume\Data Scientist 
+Resume\Documents\Documents\Jou
+rnal\Backend\app\services\econ
+omic_calendar_service.py", 
+line 263, in 
+auto_update_calendar
+    events = await 
+loop.run_in_executor(None, 
+fetch_finnhub_events)
+             ^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^
+  File "C:\Users\hp\AppData\Lo
+cal\Programs\Python\Python313\
+Lib\concurrent\futures\thread.
+py", line 59, in run
+    result = 
+self.fn(*self.args, 
+**self.kwargs)
+  File "F:\Resumes\Data 
+Analyst Resume\Data Scientist 
+Resume\Documents\Documents\Jou
+rnal\Backend\app\services\finn
+hub_service.py", line 27, in 
+fetch_finnhub_events
+    start_date = (today - date
+time.timedelta(days=today.week
+day())).strftime("%Y-%m-%d")
+                          
+^^^^^^^^^^^^^^^^^^
+AttributeError: type object 
+'datetime.datetime' has no 
+attribute 'timedelta'
+2026-02-13 01:46:06,160 - 
+__main__ - INFO - Update 
+triggered.
+2026-02-13 01:46:06,319 - 
+__main__ - INFO - Total 
+events in DB: 97
+2026-02-13 01:46:06,581 - 
+__main__ - INFO - FairEconomy 
+events in DB: 89
+2026-02-13 01:46:06,933 - 
+__main__ - INFO - Event: ECB 
+President Lagarde Speaks 
+(2026-02-14) ID: ff_EUR_202602
+14_1630_ECB_Presid
+2026-02-13 01:46:06,933 - 
+__main__ - INFO - Event: 
+Mortgage Delinquencies 
+(2026-02-13) ID: ff_USD_202602
+13_1500_Mortgage_D
+2026-02-13 01:46:06,933 - 
+__main__ - INFO - Event: CPI 
+y/y (2026-02-13) ID: 
+ff_USD_20260213_1330_CPI_y/y
+2026-02-13 01:46:06,933 - 
+__main__ - INFO - Event: CPI 
+m/m (2026-02-13) ID: 
+ff_USD_20260213_1330_CPI_m/m
+2026-02-13 01:46:06,933 - 
+__main__ - INFO - Event: Core 
+CPI m/m (2026-02-13) ID: ff_US
+D_20260213_1330_Core_CPI_m
