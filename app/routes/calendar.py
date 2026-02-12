@@ -364,3 +364,18 @@ async def get_next_high_impact_event(
     except Exception as e:
         logger.error(f"Error getting next high-impact event: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cron/sync")
+async def manual_cron_sync(db: Database = Depends(get_db)):
+    """
+    Trigger a manual sync of the economic calendar.
+    Can be called by Vercel Cron or a manual trigger.
+    """
+    try:
+        logger.info("Manual cron sync triggered")
+        await economic_calendar_service.auto_update_calendar(db)
+        return {"success": True, "message": "Calendar sync triggered successfully"}
+    except Exception as e:
+        logger.error(f"Manual cron sync failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

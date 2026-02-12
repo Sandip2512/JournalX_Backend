@@ -2,15 +2,20 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from pymongo.database import Database
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+try:
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    HAS_SCHEDULER = True
+except ImportError:
+    HAS_SCHEDULER = False
+
 from app.services.forex_factory_scraper import forex_factory_scraper
 from app.services.fair_economy_service import fetch_fair_economy_events
 from app.services.finnhub_service import fetch_finnhub_events
 
 logger = logging.getLogger(__name__)
 
-# Initialize scheduler
-scheduler = AsyncIOScheduler()
+# Initialize scheduler if available
+scheduler = AsyncIOScheduler() if HAS_SCHEDULER else None
 
 
 class EconomicCalendarService:
@@ -314,6 +319,10 @@ class EconomicCalendarService:
         Args:
             db: MongoDB database instance
         """
+        if not HAS_SCHEDULER or not scheduler:
+            logger.warning("Scheduler not available. Skipping auto-update initialization.")
+            return
+
         if self.scheduler_started:
             logger.warning("Scheduler already started")
             return
@@ -344,7 +353,7 @@ class EconomicCalendarService:
     
     def stop_scheduler(self):
         """Stop the auto-update scheduler"""
-        if scheduler.running:
+        if HAS_SCHEDULER and scheduler and scheduler.running:
             scheduler.shutdown()
             self.scheduler_started = False
             logger.info("Economic calendar scheduler stopped")
