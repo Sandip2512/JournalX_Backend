@@ -71,6 +71,7 @@ from bson import ObjectId
 
 class InviteRequest(BaseModel):
     recipient_id: str
+    meeting_id: str = None
 
 @router.post("/invite-room")
 async def invite_to_room(
@@ -79,11 +80,16 @@ async def invite_to_room(
     db: Database = Depends(get_db)
 ):
     """Invite a friend to the trader room with meeting tracking"""
-    meeting_id = str(ObjectId())
+    meeting_id = invite.meeting_id or str(ObjectId())
     
-    # Create meeting record
+    # Create or Update meeting record
+    # Note: Using update_one with upsert=True to allow multiple "invitations" for the same meeting_id
+    # but we store them as individual documents for simplicity of the current "status" checking logic.
+    # However, if it's a new friend for an existing meeting, we just insert a new record for that pair.
+    
     db.meetings.insert_one({
-        "_id": ObjectId(meeting_id),
+        "_id": ObjectId() if invite.meeting_id else ObjectId(meeting_id),
+        "meeting_id": meeting_id, # Added generic meeting_id field for multi-participant lookup
         "host_id": current_user["user_id"],
         "invitee_id": invite.recipient_id,
         "status": "pending",
@@ -109,29 +115,105 @@ async def invite_to_room(
     return {"message": "Invite sent", "meeting_id": meeting_id}
 
 @router.get("/meeting/{meeting_id}")
-async def get_meeting_status(meeting_id: str, db: Database = Depends(get_db)):
-    """Check meeting status"""
+async def get_meeting_status(meeting_id: str, db: Database = Depends(get_db), current_user = Depends(get_current_user)):
+    """Check meeting status - resolve unified meeting_id and aggregate status"""
     try:
-        meeting = db.meetings.find_one({"_id": ObjectId(meeting_id)})
-        if not meeting:
+        # Resolve unified ID first
+        unified_id = meeting_id
+        if len(meeting_id) == 24:
+            m = db.meetings.find_one({"_id": ObjectId(meeting_id)})
+            if m and m.get("meeting_id"):
+                unified_id = m["meeting_id"]
+
+        # Aggregate status: If any invitee has accepted this unified_id, return accepted.
+        # This is CRITICAL for the Host when they invite multiple people.
+        meetings = list(db.meetings.find({
+            "meeting_id": unified_id,
+            "$or": [
+                {"host_id": current_user["user_id"]},
+                {"invitee_id": current_user["user_id"]}
+            ]
+        }))
+        
+        if not meetings:
             return {"status": "not_found"}
+            
+        # If any record is accepted, the whole session is "active"
+        is_accepted = any(m.get("status") == "accepted" for m in meetings)
+        primary_meeting = meetings[0] # Use first record as metadata source
+        
         return {
-            "id": meeting_id,
-            "status": meeting["status"],
-            "host_id": meeting["host_id"],
-            "invitee_id": meeting["invitee_id"]
+            "id": unified_id,
+            "status": "accepted" if is_accepted else primary_meeting["status"],
+            "host_id": primary_meeting["host_id"],
+            "invitee_id": primary_meeting["invitee_id"]
         }
-    except:
+    except Exception as e:
+        print(f"Error in get_meeting_status: {e}")
         return {"status": "error"}
+
+@router.get("/meeting/{meeting_id}/participants")
+async def get_meeting_participants(meeting_id: str, db: Database = Depends(get_db)):
+    """Get all participants who have joined this meeting session"""
+    try:
+        # Resolve unified ID first
+        unified_id = meeting_id
+        if len(meeting_id) == 24:
+            m = db.meetings.find_one({"_id": ObjectId(meeting_id)})
+            if m and m.get("meeting_id"):
+                unified_id = m["meeting_id"]
+
+        # Find all meeting records for this unified ID
+        meetings = list(db.meetings.find({"meeting_id": unified_id}))
+        
+        if not meetings:
+            return []
+            
+        # Collect all unique user IDs (hosts and invitees who accepted)
+        participant_ids = set()
+        for m in meetings:
+            participant_ids.add(m["host_id"])
+            if m["status"] == "accepted":
+                participant_ids.add(m["invitee_id"])
+        
+        print(f"[Mesh] Resolved Room {unified_id}. Found {len(participant_ids)} participants.")
+                
+        # Fetch user info for each ID
+        participants = []
+        for uid in participant_ids:
+            user = db.users.find_one({"user_id": uid})
+            if user:
+                participants.append({
+                    "user_id": uid,
+                    "first_name": user.get("first_name", "Trader"),
+                    "last_name": user.get("last_name", ""),
+                    "avatar_url": user.get("avatar_url", ""),
+                    "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+                })
+        
+        return {
+            "meeting_id": unified_id,
+            "participants": participants
+        }
+    except Exception as e:
+        print(f"Error in get_meeting_participants: {e}")
+        return {"meeting_id": meeting_id, "participants": [], "error": str(e)}
 
 @router.post("/meeting/{meeting_id}/accept")
 async def accept_meeting(meeting_id: str, db: Database = Depends(get_db), current_user = Depends(get_current_user)):
-    """Accept/Start the meeting"""
+    """Accept/Start the meeting for the current user"""
     try:
+        # Update by meeting_id and invitee_id to be specific
         db.meetings.update_one(
-            {"_id": ObjectId(meeting_id)},
+            {"meeting_id": meeting_id, "invitee_id": current_user["user_id"]},
             {"$set": {"status": "accepted", "accepted_at": datetime.utcnow()}}
         )
+        # Fallback for old _id based invites
+        if len(meeting_id) == 24:
+            db.meetings.update_one(
+                {"_id": ObjectId(meeting_id), "invitee_id": current_user["user_id"]},
+                {"$set": {"status": "accepted", "accepted_at": datetime.utcnow()}}
+            )
         return {"message": "Meeting accepted"}
     except:
         return {"message": "Error"}
