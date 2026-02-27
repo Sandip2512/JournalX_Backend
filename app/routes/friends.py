@@ -68,8 +68,7 @@ async def search_people(query: str = Query(..., min_length=2), current_user = De
     return search_users_for_friendship(db, query, current_user["user_id"])
 
 from pydantic import BaseModel
-from datetime import datetime
-from bson import ObjectId
+
 
 class InviteRequest(BaseModel):
     recipient_id: str
