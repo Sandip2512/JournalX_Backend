@@ -73,6 +73,10 @@ class InviteRequest(BaseModel):
     recipient_id: str
     meeting_id: str = None
 
+class MeetingResponse(BaseModel):
+    user_id: str
+    action: str # "admit" or "deny"
+
 @router.post("/invite-room")
 async def invite_to_room(
     invite: InviteRequest, 
@@ -114,6 +118,71 @@ async def invite_to_room(
     db.notifications.insert_one(notification)
     return {"message": "Invite sent", "meeting_id": meeting_id}
 
+@router.post("/meeting/create")
+async def create_instant_meeting(current_user = Depends(get_current_user), db: Database = Depends(get_db)):
+    """Create an instant meeting session as Host"""
+    meeting_id = str(ObjectId())
+    # Create an initial record where the host is joined
+    db.meetings.insert_one({
+        "meeting_id": meeting_id,
+        "host_id": current_user["user_id"],
+        "invitee_id": current_user["user_id"], # Join self as host
+        "status": "accepted",
+        "created_at": datetime.utcnow(),
+        "is_instant": True
+    })
+    return {"meeting_id": meeting_id, "host_id": current_user["user_id"]}
+
+@router.post("/meeting/{meeting_id}/knock")
+async def knock_for_admission(meeting_id: str, current_user = Depends(get_current_user), db: Database = Depends(get_db)):
+    """Request entry into a gated room"""
+    # Check if a record already exists
+    existing = db.meetings.find_one({
+        "meeting_id": meeting_id,
+        "invitee_id": current_user["user_id"]
+    })
+    
+    if existing:
+        if existing["status"] == "accepted":
+            return {"status": "accepted", "message": "Already admitted"}
+        return {"status": existing["status"], "message": "Request exists"}
+
+    # Find the host of this room
+    first_meeting = db.meetings.find_one({"meeting_id": meeting_id})
+    if not first_meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+        
+    db.meetings.insert_one({
+        "meeting_id": meeting_id,
+        "host_id": first_meeting["host_id"],
+        "invitee_id": current_user["user_id"],
+        "status": "pending_admission",
+        "created_at": datetime.utcnow()
+    })
+    
+    return {"status": "pending_admission", "message": "Admission requested"}
+
+@router.post("/meeting/{meeting_id}/respond")
+async def respond_to_admission(meeting_id: str, response: MeetingResponse, current_user = Depends(get_current_user), db: Database = Depends(get_db)):
+    """Host admits or denies a user"""
+    # Verify current user is the host
+    meeting_rec = db.meetings.find_one({
+        "meeting_id": meeting_id,
+        "host_id": current_user["user_id"]
+    })
+    
+    if not meeting_rec:
+        raise HTTPException(status_code=403, detail="Not authorized to admit users")
+        
+    new_status = "accepted" if response.action == "admit" else "denied"
+    
+    result = db.meetings.update_one(
+        {"meeting_id": meeting_id, "invitee_id": response.user_id},
+        {"$set": {"status": new_status, "responded_at": datetime.utcnow()}}
+    )
+    
+    return {"status": new_status, "modified_count": result.modified_count}
+
 @router.get("/meeting/{meeting_id}")
 async def get_meeting_status(meeting_id: str, db: Database = Depends(get_db), current_user = Depends(get_current_user)):
     """Check meeting status - resolve unified meeting_id and aggregate status"""
@@ -142,11 +211,24 @@ async def get_meeting_status(meeting_id: str, db: Database = Depends(get_db), cu
         is_accepted = any(m.get("status") == "accepted" for m in meetings)
         primary_meeting = meetings[0] # Use first record as metadata source
         
+        # New: If host, return list of "knocking" users
+        knocking_users = []
+        if primary_meeting["host_id"] == current_user["user_id"]:
+            all_meetings = list(db.meetings.find({"meeting_id": unified_id, "status": "pending_admission"}))
+            for m in all_meetings:
+                user = db.users.find_one({"user_id": m["invitee_id"]})
+                if user:
+                    knocking_users.append({
+                        "user_id": m["invitee_id"],
+                        "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+                    })
+
         return {
             "id": unified_id,
             "status": "accepted" if is_accepted else primary_meeting["status"],
             "host_id": primary_meeting["host_id"],
-            "invitee_id": primary_meeting["invitee_id"]
+            "invitee_id": primary_meeting["invitee_id"],
+            "knocking_users": knocking_users
         }
     except Exception as e:
         print(f"Error in get_meeting_status: {e}")
