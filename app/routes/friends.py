@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 from typing import List
-from bson.objectid import ObjectId
 from datetime import datetime
+import uuid
 
 from app.mongo_database import get_db
 # Import get_current_user from auth.py. 
@@ -85,7 +85,7 @@ async def invite_to_room(
     db: Database = Depends(get_db)
 ):
     """Invite a friend to the trader room with meeting tracking"""
-    meeting_id = invite.meeting_id or str(ObjectId())
+    meeting_id = invite.meeting_id or str(uuid.uuid4()).replace("-", "")
     
     # Create or Update meeting record
     # Note: Using update_one with upsert=True to allow multiple "invitations" for the same meeting_id
@@ -93,8 +93,7 @@ async def invite_to_room(
     # However, if it's a new friend for an existing meeting, we just insert a new record for that pair.
     
     db.meetings.insert_one({
-        "_id": ObjectId() if invite.meeting_id else ObjectId(meeting_id),
-        "meeting_id": meeting_id, # Added generic meeting_id field for multi-participant lookup
+        "meeting_id": meeting_id,
         "host_id": current_user["user_id"],
         "invitee_id": invite.recipient_id,
         "status": "pending",
@@ -122,7 +121,7 @@ async def invite_to_room(
 @router.post("/meeting/create")
 async def create_instant_meeting(current_user = Depends(get_current_user), db: Database = Depends(get_db)):
     """Create an instant meeting session as Host"""
-    meeting_id = str(ObjectId())
+    meeting_id = str(uuid.uuid4()).replace("-", "")
     # Create an initial record where the host is joined
     db.meetings.insert_one({
         "meeting_id": meeting_id,
@@ -188,12 +187,7 @@ async def respond_to_admission(meeting_id: str, response: MeetingResponse, curre
 async def get_meeting_status(meeting_id: str, db: Database = Depends(get_db), current_user = Depends(get_current_user)):
     """Check meeting status - resolve unified meeting_id and aggregate status"""
     try:
-        # Resolve unified ID first
         unified_id = meeting_id
-        if len(meeting_id) == 24:
-            m = db.meetings.find_one({"_id": ObjectId(meeting_id)})
-            if m and m.get("meeting_id"):
-                unified_id = m["meeting_id"]
 
         # Aggregate status: If any invitee has accepted this unified_id, return accepted.
         # This is CRITICAL for the Host when they invite multiple people.
@@ -239,12 +233,7 @@ async def get_meeting_status(meeting_id: str, db: Database = Depends(get_db), cu
 async def get_meeting_participants(meeting_id: str, db: Database = Depends(get_db)):
     """Get all participants who have joined this meeting session"""
     try:
-        # Resolve unified ID first
         unified_id = meeting_id
-        if len(meeting_id) == 24:
-            m = db.meetings.find_one({"_id": ObjectId(meeting_id)})
-            if m and m.get("meeting_id"):
-                unified_id = m["meeting_id"]
 
         # Find all meeting records for this unified ID
         meetings = list(db.meetings.find({"meeting_id": unified_id}))
