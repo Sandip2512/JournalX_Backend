@@ -21,6 +21,12 @@ def cache_analytics(user_id: str, data: Dict):
         "timestamp": datetime.now()
     }
 
+def clear_user_analytics_cache(user_id: str):
+    """Clear the cached analytics data for a user"""
+    if user_id in analytics_cache:
+        del analytics_cache[user_id]
+        print(f"DEBUG: Cleared analytics cache for {user_id}")
+
 def calculate_analytics(db: Database, user_id: str) -> Dict[str, Any]:
     print(f"DEBUG: calculate_analytics called for {user_id}")
     # Check cache

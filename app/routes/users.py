@@ -2,8 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 import logging
 from app.mongo_database import get_db
-from app.crud.user_crud import get_user_by_id, update_user_profile
-from app.schemas.user_schema import UserResponse, UserUpdate
+from app.crud.user_crud import get_user_by_id, update_user_profile, clear_user_data, delete_user_account
+from app.schemas.user_schema import UserResponse, UserUpdate, ChangePasswordRequest
+from pydantic import BaseModel
+
+class VerifyPasswordRequest(BaseModel):
+    password: str
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -37,9 +41,6 @@ def update_profile(user_id: str, user_update: UserUpdate, db: Database = Depends
         
     return updated_user
 
-from app.schemas.user_schema import ChangePasswordRequest
-from app.crud.user_crud import change_password
-
 @router.post("/profile/{user_id}/password")
 def change_user_password(user_id: str, password_data: ChangePasswordRequest, db: Database = Depends(get_db)):
     """Change user password"""
@@ -54,6 +55,34 @@ def change_user_password(user_id: str, password_data: ChangePasswordRequest, db:
         raise HTTPException(status_code=400, detail="Invalid current password")
         
     return {"message": "Password changed successfully"}
+
+@router.delete("/{user_id}/data")
+def delete_user_data(user_id: str, db: Database = Depends(get_db)):
+    """Clear all personal data associated with the user"""
+    # Verify user exists
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    success = clear_user_data(db, user_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to clear user data")
+        
+    return {"message": "All user data cleared successfully"}
+
+@router.delete("/{user_id}/account")
+def delete_user(user_id: str, request: VerifyPasswordRequest, db: Database = Depends(get_db)):
+    """Permanently delete user account and all data"""
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    success = delete_user_account(db, user_id, request.password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Invalid password or failed to delete account")
+        
+    return {"message": "Account deleted successfully"}
+
 @router.get("/{user_id}/mt5-status")
 def get_mt5_status(user_id: str, db: Database = Depends(get_db)):
     """Get MT5 connection status for a user"""
