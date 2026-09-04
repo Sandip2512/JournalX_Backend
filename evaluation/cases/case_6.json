@@ -1,0 +1,227 @@
+{
+  "id": 6,
+  "pattern": "No meaningful pattern.",
+  "category": "None",
+  "trades": [
+    {
+      "trade_no": 1,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -36.90278232536042,
+      "open_time": "2023-01-01T00:00:00",
+      "close_time": "2023-01-01T00:30:00"
+    },
+    {
+      "trade_no": 2,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 49.83937944754396,
+      "open_time": "2023-01-01T03:00:00",
+      "close_time": "2023-01-01T03:30:00"
+    },
+    {
+      "trade_no": 3,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 45.892489068511495,
+      "open_time": "2023-01-01T06:00:00",
+      "close_time": "2023-01-01T06:30:00"
+    },
+    {
+      "trade_no": 4,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 46.711267823294136,
+      "open_time": "2023-01-01T09:00:00",
+      "close_time": "2023-01-01T09:30:00"
+    },
+    {
+      "trade_no": 5,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 32.60819725859595,
+      "open_time": "2023-01-01T12:00:00",
+      "close_time": "2023-01-01T12:30:00"
+    },
+    {
+      "trade_no": 6,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 19.620651865888277,
+      "open_time": "2023-01-01T15:00:00",
+      "close_time": "2023-01-01T15:30:00"
+    },
+    {
+      "trade_no": 7,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 3.9110798914852936,
+      "open_time": "2023-01-01T18:00:00",
+      "close_time": "2023-01-01T18:30:00"
+    },
+    {
+      "trade_no": 8,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 43.41023520227482,
+      "open_time": "2023-01-01T21:00:00",
+      "close_time": "2023-01-01T21:30:00"
+    },
+    {
+      "trade_no": 9,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -37.884194176135324,
+      "open_time": "2023-01-02T00:00:00",
+      "close_time": "2023-01-02T00:30:00"
+    },
+    {
+      "trade_no": 10,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -2.5818723985391756,
+      "open_time": "2023-01-02T03:00:00",
+      "close_time": "2023-01-02T03:30:00"
+    },
+    {
+      "trade_no": 11,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 38.66522232996549,
+      "open_time": "2023-01-02T06:00:00",
+      "close_time": "2023-01-02T06:30:00"
+    },
+    {
+      "trade_no": 12,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 36.317809119645645,
+      "open_time": "2023-01-02T09:00:00",
+      "close_time": "2023-01-02T09:30:00"
+    },
+    {
+      "trade_no": 13,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 48.14803723034868,
+      "open_time": "2023-01-02T12:00:00",
+      "close_time": "2023-01-02T12:30:00"
+    },
+    {
+      "trade_no": 14,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 7.349600628620436,
+      "open_time": "2023-01-02T15:00:00",
+      "close_time": "2023-01-02T15:30:00"
+    },
+    {
+      "trade_no": 15,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -24.96438725539043,
+      "open_time": "2023-01-02T18:00:00",
+      "close_time": "2023-01-02T18:30:00"
+    },
+    {
+      "trade_no": 16,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -11.650703686319972,
+      "open_time": "2023-01-02T21:00:00",
+      "close_time": "2023-01-02T21:30:00"
+    },
+    {
+      "trade_no": 17,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -9.736997619439883,
+      "open_time": "2023-01-03T00:00:00",
+      "close_time": "2023-01-03T00:30:00"
+    },
+    {
+      "trade_no": 18,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -37.07746965572013,
+      "open_time": "2023-01-03T03:00:00",
+      "close_time": "2023-01-03T03:30:00"
+    },
+    {
+      "trade_no": 19,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 0.9,
+      "net_profit": -0.15175675841281588,
+      "open_time": "2023-01-03T06:00:00",
+      "close_time": "2023-01-03T06:30:00"
+    },
+    {
+      "trade_no": 20,
+      "symbol": "GBPUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 2.596944460188354,
+      "open_time": "2023-01-03T09:00:00",
+      "close_time": "2023-01-03T09:30:00"
+    }
+  ]
+}

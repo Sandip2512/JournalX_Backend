@@ -1,0 +1,17 @@
+[
+  {
+    "case_id": "CASE_01_OVERTRADING",
+    "runtime_s": 115.88480472564697,
+    "baseline_output": {
+      "overall_summary": "Auto Generated",
+      "findings": [],
+      "recommendations": [
+        "Gather and submit comprehensive trading log data to enable performance evaluation.",
+        "Maintain standard risk management and disciplined trading practices until empirical analysis is available."
+      ],
+      "limitations": [
+        "The input verified findings list was empty, preventing specific data-driven insights or numerical evaluation."
+      ]
+    }
+  }
+]

@@ -1,0 +1,783 @@
+[
+  {
+    "case_id": "CASE_01_OVERTRADING",
+    "runtime_s": 28.39812397956848,
+    "baseline_output": {
+      "overall_summary": "Analysis of the 75 trades reveals an overall profitable baseline (60.0% win rate, $450.0 net PnL, Profit Factor 1.25) entirely executed on EURUSD BUY positions with fixed 1.0 lot volume. However, performance is heavily impacted by intraday trade frequency. The trader achieves a 100% win rate on the first three trades of a day but loses 100% of trades taken as trade #4 or beyond, erasing $1,800.0 of cumulative profits.",
+      "findings": [
+        {
+          "finding_id": "F-01",
+          "claim": "Intraday trade frequency past 3 trades leads to severe losses and a 0% win rate.",
+          "category": "Overtrading",
+          "evidence": "Trades 1, 2, and 3 each generated 15 wins out of 15 trades (100.0% win rate, $750.0 PnL each). In contrast, trade_4_plus had 0 wins out of 30 trades (0.0% win rate, net PnL of -$1,800.0, Profit Factor 0.0).",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "With a moderate sample size of 30 trades in the trade_4_plus bucket consistently generating losses, there is strong evidence that overtrading directly degrades execution quality."
+        },
+        {
+          "finding_id": "F-02",
+          "claim": "Trading performance declines significantly immediately following a loss.",
+          "category": "None",
+          "evidence": "Trades following a win have a 66.67% win rate and $600.0 net PnL (Profit Factor 1.67 across 45 trades), whereas trades following a loss drop to a 48.28% win rate and -$200.0 net PnL (Profit Factor 0.78 across 29 trades).",
+          "sample_size": 29,
+          "confidence": "Medium",
+          "reasoning": "A moderate sample size shows negative expected value when taking trades directly after a loss, indicating potential revenge trading or poor post-loss execution."
+        }
+      ],
+      "recommendations": [
+        "Implement a strict daily limit of maximum 3 trades per day to completely eliminate the trade_4_plus loss cluster.",
+        "Pause trading or take a mandatory cooling-off period after any losing trade to avoid performance degradation."
+      ],
+      "limitations": [
+        "The dataset only contains a single symbol (EURUSD), single direction (BUY), and uniform position sizing (1.0 lot), preventing comparative analysis across assets, trade directions, or sizing strategies.",
+        "Sub-group sample sizes for specific daily sequences (e.g., consecutive losses) are small to moderate."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_02_STRONG_INSTRUMENT",
+    "runtime_s": 23.234082221984863,
+    "baseline_output": {
+      "overall_summary": "The account generated an overall net loss of -430.67 across 80 total trades (50.0% win rate, profit factor 0.75). The loss is driven entirely by trading XAUUSD (0.0% win rate, -1695.97 PnL), whereas EURUSD trading was 100.0% profitable (+1265.30 PnL). Performance also severely deteriorated on Tuesday and Wednesday, as well as during extended trade sequences (trade 4+). Position sizing remained static at 1.0 lot across all conditions.",
+      "findings": [
+        {
+          "finding_id": "FND-01",
+          "claim": "Performance is completely bifurcated by instrument, with high profitability on EURUSD and total loss on XAUUSD.",
+          "category": "Instrument",
+          "evidence": "EURUSD yielded 40 winning trades out of 40 (100.0% win rate, net PnL +1265.30, profit factor 999.0). In contrast, XAUUSD yielded 0 winning trades out of 40 (0.0% win rate, net PnL -1695.97, profit factor 0.0).",
+          "sample_size": 80,
+          "confidence": "High",
+          "reasoning": "Both EURUSD and XAUUSD have moderate sample sizes (40 trades each). The contrast in performance between the two assets is absolute (100% vs 0% win rate)."
+        },
+        {
+          "finding_id": "FND-02",
+          "claim": "Trading beyond the third execution per sequence/day (trade 4+) accounts for all net losses in overtrading metrics.",
+          "category": "Overtrading",
+          "evidence": "Trade 1 and Trade 2 both had 75.0% win rates with positive net PnL (+55.92 and +68.58, respectively). Trade 4+ comprised 68 trades with a 47.06% win rate, net PnL of -540.37, and profit factor of 0.65.",
+          "sample_size": 68,
+          "confidence": "High",
+          "reasoning": "Trade 4+ represents a large sample size (68 trades). Early trades in a sequence were profitable, whereas high trade volume degraded overall profitability."
+        },
+        {
+          "finding_id": "FND-03",
+          "claim": "Day of week distribution shows complete profitability on Sunday/Monday followed by total failure on Tuesday/Wednesday.",
+          "category": "Session",
+          "evidence": "Sunday (14 trades) and Monday (24 trades) achieved a 100.0% win rate (+420.65 and +765.97 net PnL). Tuesday (24 trades) dropped to an 8.33% win rate (-877.58 PnL), and Wednesday (18 trades) dropped to a 0.0% win rate (-739.71 PnL).",
+          "sample_size": 80,
+          "confidence": "High",
+          "reasoning": "With 38 trades on Sunday/Monday and 42 trades on Tuesday/Wednesday, the sample sizes are moderate and show a stark drop in win rate from 100% to 4.76% overall across Tuesday and Wednesday."
+        },
+        {
+          "finding_id": "FND-04",
+          "claim": "Trades executed after a loss experience a complete collapse in win rate.",
+          "category": "None",
+          "evidence": "Trades following a win ('after_win') achieved a 97.5% win rate across 40 trades (net PnL +1173.01). Trades following a loss ('after_loss') achieved a 0.0% win rate across 39 trades (net PnL -1644.22).",
+          "sample_size": 79,
+          "confidence": "High",
+          "reasoning": "Both sequence groups have moderate sample sizes (40 and 39 trades). The win rate drops from 97.5% following a win to 0.0% following a loss, strongly mirroring the sequence transition between EURUSD and XAUUSD trades."
+        }
+      ],
+      "recommendations": [
+        "Cease trading XAUUSD immediately and focus executions exclusively on EURUSD until strategy adjustments for XAUUSD can be backtested.",
+        "Limit trade frequency per session/sequence to a maximum of 3 trades, avoiding high-frequency trade 4+ execution buckets.",
+        "Halt trading on Tuesday and Wednesday or re-evaluate market condition triggers for mid-week trading.",
+        "Implement a strict cool-down or stop-trading rule immediately after experiencing a loss to break loss-streak sequences."
+      ],
+      "limitations": [
+        "Sample sizes for trade_1, trade_2, and trade_3 are very small (4 trades each), requiring caution before drawing definitive conclusions on exact early-sequence win rates.",
+        "Consecutive loss sub-categories (consecutive_losses_1 and consecutive_losses_2) each contain only 1 trade.",
+        "Positions were exclusively BUY orders (80 trades) and held within a single duration bracket (15 minutes - 1 hour), preventing comparative analysis across trade directions or holding durations.",
+        "Position sizing was uniform (1.0 lot across all trades), preventing position size adjustment evaluation."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_04_GENERIC",
+    "runtime_s": 24.744723320007324,
+    "baseline_output": {
+      "overall_summary": "The trading history consists of 30 total trades generating a net PnL of -30.08, a win rate of 43.33%, a profit factor of 0.83, and a maximum drawdown of 68.76. All trades were executed exclusively on GBPUSD in the BUY direction on Fridays with holding times of 15 minutes - 1 hour and fixed lot volume of 1.0. A large majority of trades (27 out of 30) occurred within the trade_4_plus category.",
+      "findings": [
+        {
+          "finding_id": "F-01",
+          "claim": "Heavy trade volume is concentrated in trade_4_plus sequence, generating negative PnL.",
+          "category": "Overtrading",
+          "evidence": "27 out of 30 trades occurred in trade_4_plus, producing a net PnL of -16.02, a win rate of 44.44%, profit factor of 0.9, and maximum drawdown of 68.76.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "With 27 trades categorized under MODERATE sample size in trade_4_plus, data shows sustained negative return and high drawdown during extended daily trading."
+        },
+        {
+          "finding_id": "F-02",
+          "claim": "Trading activity is completely unvaried across instrument, direction, volume, holding time, and day of week.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30 of 30) were BUY trades on GBPUSD on Friday with holding times of 15 minutes - 1 hour and position volume of 1.0.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "All 30 metrics records across instruments, directions, volume groups, holding times, and days of the week share identical stats (win rate 43.33%, net PnL -30.08)."
+        },
+        {
+          "finding_id": "F-03",
+          "claim": "Trades taken immediately after a win performed worse than trades taken after a loss.",
+          "category": "None",
+          "evidence": "After a win, net PnL was -22.9 (win rate 38.46%, PF 0.73, 13 trades), whereas after a loss, net PnL was 3.6 (win rate 50.0%, PF 1.05, 16 trades).",
+          "sample_size": 13,
+          "confidence": "Low",
+          "reasoning": "While performance metrics after wins show negative results compared to after losses, the sample sizes (13 after win, 16 after loss) are classified as SMALL, providing insufficient evidence for a strong conclusion."
+        }
+      ],
+      "recommendations": [
+        "Evaluate the performance and necessity of executing 4 or more trades per day, as trade_4_plus accounted for 27 trades and -16.02 net PnL.",
+        "Gather additional trading data across other week days, directions (SELL), and instruments to determine if overall negative PnL is specific to Friday GBPUSD BUY trades.",
+        "Monitor post-win trade executions to see if lower performance after wins (38.46% win rate across 13 trades) persists with larger sample sizes."
+      ],
+      "limitations": [
+        "Overall sample size is moderate (30 trades), limiting the statistical strength of findings.",
+        "Sub-analyses such as trade sequences after wins/losses and consecutive losses have SMALL or VERY_SMALL sample sizes (ranging from 3 to 16 trades).",
+        "There is no data available for HIGH_VOLUME trades, non-GBPUSD instruments, SELL directions, or days of the week other than Friday."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_05_GENERIC",
+    "runtime_s": 18.364659070968628,
+    "baseline_output": {
+      "overall_summary": "The analyzed trading history consists of 30 total trades focused exclusively on GBPUSD BUY orders held between 15 minutes and 1 hour on Fridays. Despite maintaining a positive win rate of 53.33%, the trading period resulted in a net loss of -27.69 and a maximum drawdown of 65.86%. The overall unprofitability is primarily driven by an unfavorable risk-reward ratio, where the average loss (12.53) significantly exceeds the average win (9.24), producing a profit factor of 0.84. Furthermore, sample sizes across specific sequence and overtrading sub-breakdowns are very small, limiting statistical confidence in sequence-based patterns.",
+      "findings": [
+        {
+          "finding_id": "F-05",
+          "claim": "Session metrics cannot be differentiated across time frames or days.",
+          "category": "Session",
+          "evidence": "All 30 trades occurred on Friday with holding times between 15 minutes and 1 hour.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "There is no variance in day of week or holding time categories, meaning session-based comparative performance evaluation is not possible with the provided dataset."
+        }
+      ],
+      "recommendations": [
+        "Focus on improving risk management parameters to ensure average winning trades equal or exceed average losing trades (e.g., enforcing tighter stop losses or wider profit targets).",
+        "Implement strict drawdown controls to cap maximum drawdown below the recorded 65.86%.",
+        "Expand sample size across varied market conditions, days of the week, and trade sequence positions to confirm behavioral patterns with statistical significance."
+      ],
+      "limitations": [
+        "Overall dataset is small to moderate (30 total trades), limiting statistical robustness across sub-group analyses.",
+        "Sub-category samples (trade_1, trade_2, trade_3, consecutive_losses_2, consecutive_losses_3_plus) contain very small sample sizes (1 to 3 trades), rendering performance comparisons inconclusive.",
+        "Zero variance in instrument, direction, holding time, volume, or day of week prevents multi-asset or regime-based comparison."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_06_GENERIC",
+    "runtime_s": 19.365511655807495,
+    "baseline_output": {
+      "overall_summary": "The analyzed trading dataset comprises 30 trades with an overall win rate of 46.67%, a net PnL of 8.29, a profit factor of 1.06, and a high maximum drawdown of 53.17%. The trading activity is entirely concentrated on GBPUSD BUY trades held for 15 minutes to 1 hour on Fridays with fixed position sizes of 1.0 lot. Key patterns show reduced profitability after winning trades and significant drawdown associated with extended intraday trading (trade 4+).",
+      "findings": [
+        {
+          "finding_id": "FIND-01",
+          "claim": "Intraday performance degrades heavily when taking 4 or more trades, resulting in overall negative return for extended trading.",
+          "category": "Overtrading",
+          "evidence": "Trades 1 and 2 produced positive net PnLs of 18.60 and 12.94 respectively (n=1 each). In contrast, trade_4_plus (27 trades) generated a negative net PnL of -15.03, a win rate of 44.44%, a profit factor of 0.89, and a maximum drawdown of 50.59%.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "The moderate sample size of 27 trades in trade_4_plus shows consistent performance degradation compared to the initial trades of the sequence, indicating overtrading risks."
+        },
+        {
+          "finding_id": "FIND-02",
+          "claim": "Trading performance drops significantly following a winning trade compared to following a losing trade.",
+          "category": "None",
+          "evidence": "After a win (13 trades), net PnL is -20.27 with a win rate of 38.46% and profit factor of 0.70. After a loss (16 trades), net PnL is positive at 9.96 with a win rate of 50.00% and profit factor of 1.13.",
+          "sample_size": 13,
+          "confidence": "Low",
+          "reasoning": "While the difference in PnL (-20.27 after win vs +9.96 after loss) is noticeable, sample sizes for sequence analyses are small (13 and 16 trades), requiring caution before confirming a persistent behavioral bias."
+        },
+        {
+          "finding_id": "FIND-03",
+          "claim": "Trading scope is completely restricted to a single instrument, direction, weekday, and holding time window.",
+          "category": "Session",
+          "evidence": "100% of trades (30 of 30) were executed on GBPUSD, taking BUY positions, occurring on Friday, held for 15 minutes - 1 hour, using 1.0 volume.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "The deterministic metrics show zero variance in asset symbol, order direction, day of week, holding time bracket, or trade size across all 30 trades."
+        }
+      ],
+      "recommendations": [
+        "Cap daily trading frequency to 2-3 trades, as performance declines significantly from trade 4 onwards (net PnL -15.03, PF 0.89).",
+        "Implement strict risk management and post-win discipline to mitigate losses following profitable trades (net PnL -20.27 after wins).",
+        "Expand testing cautiously across other weekdays and sell directions to verify if the strategy's profitability holds outside Friday GBPUSD BUY trades."
+      ],
+      "limitations": [
+        "The overall sample size of 30 trades is moderate, limiting the statistical validity of the conclusions.",
+        "Sub-segment sample sizes for trade sequences (e.g., individual trade positions 1-3, consecutive losses 3+) are very small (n=1 to n=3), making those sub-metrics inconclusive.",
+        "Lack of diversity in market conditions (single symbol, single day of week, single order side) prevents evaluating strategy performance across broader market environments."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_07_GENERIC",
+    "runtime_s": 24.360247135162354,
+    "baseline_output": {
+      "overall_summary": "The trading history consists of 30 total trades resulting in an unprofitability profile with a net PnL of -19.84, a 43.33% win rate, a profit factor of 0.87, and a maximum drawdown of 84.44. All 30 trades were GBPUSD BUY orders executed on Friday within a 15-minute to 1-hour holding time bucket using a constant position size of 1.0. Performance drops notably after losses, and the vast majority of execution is concentrated in high trade-count iterations (trade 4+).",
+      "findings": [
+        {
+          "finding_id": "FINDING_1",
+          "claim": "Trading performance declines significantly following a loss.",
+          "category": "Overtrading",
+          "evidence": "After a loss, win rate drops to 29.41% (5 wins, 12 losses) across 17 trades with a net PnL of -44.09 and profit factor of 0.57. Conversely, after a win, win rate is 58.33% with a net PnL of 13.58 and profit factor of 1.29.",
+          "sample_size": 17,
+          "confidence": "Medium",
+          "reasoning": "A sample size of 17 trades after a loss categorized as SMALL demonstrates a clear performance disparity compared to trades taken after a win."
+        },
+        {
+          "finding_id": "FINDING_2",
+          "claim": "Execution is heavily concentrated in sequence position 4 and beyond, operating at a net loss.",
+          "category": "Overtrading",
+          "evidence": "Trade 4+ accounts for 27 of 30 trades (44.44% win rate, net PnL of -5.50, profit factor 0.96, max drawdown 59.43).",
+          "sample_size": 27,
+          "confidence": "High",
+          "reasoning": "A moderate sample size of 27 trades shows that the dominant mode of execution occurs deep into sequence trade counts without achieving overall profitability."
+        },
+        {
+          "finding_id": "FINDING_3",
+          "claim": "Trading behavior lacks asset, directional, schedule, and sizing variation.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30/30) are GBPUSD BUY orders executed on Fridays with holding times between 15 minutes and 1 hour and a uniform volume of 1.0.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "The complete dataset of 30 trades shows zero variance across symbol, direction, day of week, holding time, or volume metrics."
+        }
+      ],
+      "recommendations": [
+        "Establish strict stop-trading or cooling-off rules after a loss to mitigate the degraded win rate (29.41%) and low profit factor (0.57) observed in subsequent trades.",
+        "Evaluate limiting the maximum number of daily/session trades, given that 27 of 30 trades fall into the trade 4+ bucket with negative net PnL.",
+        "Review strategy criteria to determine if restricting setups to GBPUSD BUY orders on Fridays is yielding a statistical edge, as current parameters exhibit a 0.87 overall profit factor."
+      ],
+      "limitations": [
+        "The overall dataset size is moderate (30 trades), limiting high-confidence statistical extrapolation.",
+        "Individual sub-categories for trade sequence counts 1, 2, and 3 each contain only 1 trade (VERY_SMALL sample size), rendering comparisons for early session trades inconclusive.",
+        "Zero data variance across non-GBPUSD assets, SELL directions, non-Friday days, or variable position sizes prevents evaluating performance across alternative trading contexts."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_08_GENERIC",
+    "runtime_s": 16.686304807662964,
+    "baseline_output": {
+      "overall_summary": "The performance history comprises 30 trades executed exclusively as BUY positions on GBPUSD on Fridays, held between 15 minutes and 1 hour with uniform volume (1.0). Overall net PnL is slightly positive (+9.79) with a profit factor of 1.07 and a win rate of 46.67%, but performance is compromised by a severe maximum drawdown of 76.88%. Performance degrades markedly when trade frequency increases to 4 or more trades, driving net losses.",
+      "findings": [
+        {
+          "finding_id": "F1",
+          "claim": "Trading performance degrades significantly after the third trade, indicating overtrading.",
+          "category": "Overtrading",
+          "evidence": "Trades 1 and 2 yielded positive net PnLs of 11.54 and 17.76 respectively, whereas trade_4_plus (27 trades) resulted in a net PnL of -4.78, a profit factor of 0.96, and a maximum drawdown of 69.58%.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "The vast majority of trades (27 out of 30) occurred in the trade_4_plus sequence, generating negative net returns and high drawdown, while initial trades in the sequence were profitable."
+        },
+        {
+          "finding_id": "F2",
+          "claim": "Trading is entirely concentrated in a single asset, direction, day, and time frame.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30 of 30) were executed on GBPUSD, taking BUY positions on Friday with holding times of 15 minutes to 1 hour.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "Data confirms zero variation in symbol, direction, day of the week, position volume, or holding time duration across all recorded trades."
+        },
+        {
+          "finding_id": "F3",
+          "claim": "Performance immediately following a loss results in negative net PnL and lower profit factor.",
+          "category": "None",
+          "evidence": "Trades taken after a loss (16 trades) generated a net PnL of -4.30 and a profit factor of 0.95, compared to trades after a win (13 trades) which generated a net PnL of +2.55 and a profit factor of 1.04.",
+          "sample_size": 16,
+          "confidence": "Low",
+          "reasoning": "While post-loss trades show negative expected value, the sample size of 16 trades is small, and sub-breakdowns (such as 3+ consecutive losses generating +3.81 PnL across 5 trades) show conflicting noise due to sample insufficiency."
+        }
+      ],
+      "recommendations": [
+        "Limit trading volume to 2 to 3 trades per session/day to mitigate performance loss observed during extended trade sequences (trade_4_plus).",
+        "Implement tighter risk parameters or stop-loss rules to address the critical peak drawdown of 76.88%.",
+        "Consider pausing or re-evaluating entry criteria immediately after a losing trade, given negative net PnL (-4.30) following losses."
+      ],
+      "limitations": [
+        "Overall sample size is moderate (30 trades), limiting statistical certainty.",
+        "Sequence breakdowns for early trade counts (trade_1, trade_2, trade_3) have very small sample sizes (N=1 each), preventing robust comparison.",
+        "Lack of diversity in assets, trading days, and order directions prevents assessing strategy performance across different market regimes."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_09_GENERIC",
+    "runtime_s": 29.026756525039673,
+    "baseline_output": {
+      "error": "API_ERROR: Illegal trailing comma before end of object: line 20 column 169 (char 1880)"
+    }
+  },
+  {
+    "case_id": "CASE_10_GENERIC",
+    "runtime_s": 25.13247537612915,
+    "baseline_output": {
+      "error": "API_ERROR: Illegal trailing comma before end of object: line 20 column 249 (char 1804)"
+    }
+  },
+  {
+    "case_id": "CASE_11_GENERIC",
+    "runtime_s": 20.988980054855347,
+    "baseline_output": {
+      "overall_summary": "The trading history consists of 30 total trades executed entirely on Fridays on GBPUSD taking only BUY positions with fixed 1.0 lot sizing and 15m-1h holding times. Overall performance is unprofitable with a net PnL of -40.31, a win rate of 46.67%, a profit factor of 0.78, and a maximum drawdown of 93.73. Performance declines severely following winning trades (net PnL -61.38 across 13 trades) and during heavy trading activity (27 trades occurring at trade position 4 or higher with -37.50 PnL).",
+      "findings": [
+        {
+          "finding_id": "F01",
+          "claim": "High trade frequency (trade 4 and higher) accounts for 90% of trade activity and drives net losses.",
+          "category": "Overtrading",
+          "evidence": "The trade_4_plus category contains 27 of 30 trades, generating a net PnL of -37.50, a win rate of 48.15%, and a profit factor of 0.78.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "With 27 of 30 total trades falling into trade_4_plus, excessive trade frequency within the session directly corresponds to the majority of overall negative PnL."
+        },
+        {
+          "finding_id": "F02",
+          "claim": "Trading performance declines significantly following a winning trade compared to following a loss.",
+          "category": "None",
+          "evidence": "Trades after a win yielded a 30.77% win rate, net PnL of -61.38, and profit factor of 0.43 (13 trades), whereas trades after a loss yielded a 56.25% win rate, net PnL of 9.58, and profit factor of 1.13 (16 trades).",
+          "sample_size": 13,
+          "confidence": "Low",
+          "reasoning": "A severe drop in net PnL and profit factor is observed post-win, but the small sample size (13 trades) requires caution before drawing definitive conclusions."
+        },
+        {
+          "finding_id": "F03",
+          "claim": "Trading behavior is entirely rigid and concentrated on a single instrument, direction, day, holding time, and lot size.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30 of 30) were executed on GBPUSD as BUY orders on Fridays, holding between 15 minutes and 1 hour with a uniform volume of 1.0 lot.",
+          "sample_size": 30,
+          "confidence": "Medium",
+          "reasoning": "The data reflects complete structural concentration on Friday BUY trades in GBPUSD, providing zero cross-asset or cross-day diversification."
+        }
+      ],
+      "recommendations": [
+        "Establish rules to halt or restrict trading after a winning trade to prevent severe post-win profit give-back.",
+        "Implement daily trade limits to reduce overtrading in extended sessions (trade 4 and beyond).",
+        "Evaluate expanding parameters beyond Friday-only BUY setups or reassess the core edge of the Friday GBPUSD strategy."
+      ],
+      "limitations": [
+        "Total sample size is moderate (30 trades), limiting overall statistical significance.",
+        "Sequence sub-samples (e.g., trades after win = 13, consecutive losses 3+ = 2) and overtrading sub-samples (trades 1-3 = 1 trade each) are small or very small.",
+        "Lack of diversity in asset class, trading days, order directions, and volume sizing prevents cross-condition comparison."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_12_GENERIC",
+    "runtime_s": 14.384308338165283,
+    "baseline_output": {
+      "overall_summary": "The analyzed trading dataset consists of 30 total trades with a 50.0% win rate, yielding a net PnL of 47.46 and a profit factor of 1.47. All trades were executed exclusively on GBPUSD as BUY positions on Fridays, held between 15 minutes and 1 hour with a uniform position size of 1.0 unit. While overall performance is profitable, sample sizes across specific sequence categories remain limited.",
+      "findings": [
+        {
+          "finding_id": "F-01",
+          "claim": "Trading activity is heavily concentrated in high intra-day sequence trades (trade 4+).",
+          "category": "Overtrading",
+          "evidence": "trade_4_plus accounts for 27 of the 30 trades, generating a net PnL of 48.83, a 51.85% win rate, a profit factor of 1.60, and a maximum drawdown of 30.52.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "90% of all trades occur within the trade_4_plus group. Although performance in this group remains positive, it captures nearly the entire drawdown of the dataset (30.52 out of 30.52)."
+        },
+        {
+          "finding_id": "F-02",
+          "claim": "Trading exhibits complete operational uniformity across instrument, direction, day, volume, and holding time.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30/30) were GBPUSD BUY orders executed on Friday with 1.0 volume and held for 15 minutes to 1 hour, yielding a 50.0% win rate and 1.47 profit factor.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "All 30 trades share identical fixed parameters across symbol, direction, holding window, day of the week, and lot sizing."
+        },
+        {
+          "finding_id": "F-03",
+          "claim": "Data is insufficient to draw conclusions regarding post-streak recovery behavior after multiple consecutive losses.",
+          "category": "None",
+          "evidence": "consecutive_losses_2 contains only 3 trades (net PnL 1.98), and consecutive_losses_3_plus contains only 2 trades (net PnL 10.16).",
+          "sample_size": 5,
+          "confidence": "Low",
+          "reasoning": "Sample sizes of 3 and 2 trades are classified as VERY_SMALL, providing insufficient statistical evidence to evaluate strategy resilience or behavioral shifts following loss streaks."
+        }
+      ],
+      "recommendations": [
+        "Maintain current risk management protocols while monitoring execution frequency in extended session sequences (trade 4+), where maximum drawdown (30.52) was concentrated.",
+        "Collect a larger dataset across diverse market conditions, days of the week, and trade directions to test system robustness beyond Friday GBPUSD BUY orders."
+      ],
+      "limitations": [
+        "The overall sample size of 30 trades is moderate and restricts high-confidence statistical inferences.",
+        "Lack of diversity in trading conditions (100% Friday, 100% BUY, 100% GBPUSD, fixed 1.0 volume) prevents analysis across alternative assets, market regimes, or sizing adjustments.",
+        "Sub-analyses for sequence length (consecutive losses 2 and 3+) have very small sample sizes (<= 3 trades), making sequence-specific metrics inconclusive."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_13_GENERIC",
+    "runtime_s": 15.48074221611023,
+    "baseline_output": {
+      "overall_summary": "The analyzed trading history consists of 30 trades executed exclusively as GBPUSD BUY orders on Fridays with 15-minute to 1-hour holding times and a constant position size of 1.0 lot. Overall performance is profitable with a net PnL of 43.42, a 46.67% win rate, and a profit factor of 1.40. Gains are concentrated in higher trade sequences (trade 4+), while post-win sequences show elevated drawdown risk.",
+      "findings": [
+        {
+          "finding_id": "FIND-01",
+          "claim": "The vast majority of trades and net profitability occur on trade rank 4 and beyond.",
+          "category": "Overtrading",
+          "evidence": "Trades 4+ account for 27 of 30 trades, generating 56.72 in net PnL with a profit factor of 1.60 and 48.15% win rate, whereas trades 1-3 consist of 1 trade each resulting in a cumulative net PnL of -13.30.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "While trade 4+ displays strong sample size and profitability, sample sizes for individual early trade ranks (trades 1, 2, and 3) are extremely small (1 trade each), limiting robust baseline comparisons."
+        },
+        {
+          "finding_id": "FIND-02",
+          "claim": "Maximum drawdown increases substantially following a winning trade.",
+          "category": "None",
+          "evidence": "The after-win sequence exhibits a maximum drawdown of 42.45% across 14 trades, compared to 27.75% after a loss (15 trades) and 24.74% overall baseline drawdown.",
+          "sample_size": 14,
+          "confidence": "Low",
+          "reasoning": "The sample size of 14 trades after a win is small, meaning the observed jump in maximum drawdown could be driven by a few specific outlier trades rather than a persistent behavioral flaw."
+        },
+        {
+          "finding_id": "FIND-03",
+          "claim": "Trading behavior is entirely concentrated in a single asset, side, day, and hold time profile.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30/30) were GBPUSD BUY orders executed on Fridays with holding durations between 15 minutes and 1 hour and position sizing of 1.0 lot.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "Deterministic metrics confirm zero variation in symbol, trade direction, day of week, position volume, or holding duration bracket across all 30 trades."
+        }
+      ],
+      "recommendations": [
+        "Monitor risk exposure immediately after winning trades to curb the 42.45% maximum drawdown observed in post-win sequences.",
+        "Gather more data on early daily trade ranks (trades 1 to 3) to evaluate whether systematic early losses exist or if the result is an artifact of tiny sample sizes.",
+        "Test strategy performance across additional trading days, market directions, and currency pairs to assess system robustness outside Friday GBPUSD BUY trades."
+      ],
+      "limitations": [
+        "The overall sample size of 30 trades is moderate and restricted entirely to a single market setup (GBPUSD BUY on Fridays), limiting generalizability.",
+        "Sub-group analysis metrics such as specific trade ranks (trades 1, 2, 3) and consecutive loss sequences (2 and 3+) suffer from very small sample sizes (1 to 4 trades), offering low statistical certainty."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_14_GENERIC",
+    "runtime_s": 18.053601026535034,
+    "baseline_output": {
+      "overall_summary": "The analyzed trading dataset consists of 30 moderate-sized trades, yielding an overall win rate of 63.33%, a net PnL of 134.47, and a profit factor of 2.78. Trading activity is strictly homogeneous across several parameters: 100% of trades are BUY orders on GBPUSD held for 15 minutes to 1 hour on Fridays, with a constant volume of 1.0 lot. The vast majority of trades (27 out of 30) fall into the trade_4_plus category.",
+      "findings": [
+        {
+          "finding_id": "F-01",
+          "claim": "Trading frequency is heavily clustered in trade 4+, which generates all net profits for the account.",
+          "category": "Overtrading",
+          "evidence": "trade_4_plus accounts for 27 of 30 trades (90%), generating 137.57 net PnL with a 62.96% win rate and a profit factor of 3.36.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "With 27 trades in trade_4_plus, there is sufficient sample size to identify high trade volume concentration in late trade sequences, though early sequence buckets (trades 1, 2, and 3) have sample sizes of only 1 trade each."
+        },
+        {
+          "finding_id": "F-02",
+          "claim": "The strategy demonstrates exclusive focus on long GBPUSD positions on Fridays.",
+          "category": "Instrument",
+          "evidence": "GBPUSD, BUY direction, Friday execution, and 15 minute - 1 hour holding duration each represent 30 out of 30 total trades (100% of activity).",
+          "sample_size": 30,
+          "confidence": "Medium",
+          "reasoning": "The moderate sample size of 30 trades shows complete uniformity in trading conditions, establishing profitability (net PnL 134.47) under this specific environment."
+        },
+        {
+          "finding_id": "F-03",
+          "claim": "Average losses are higher following winning trades than following losing trades.",
+          "category": "None",
+          "evidence": "After a win (18 trades), average loss is 9.52, whereas after a loss (11 trades), average loss is 3.65.",
+          "sample_size": 29,
+          "confidence": "Low",
+          "reasoning": "Sequence analyses rely on small sample sizes (18 and 11 trades respectively). Although the dataset shows larger average losses following wins, the evidence is insufficient to make statistical assertions."
+        }
+      ],
+      "recommendations": [
+        "Continue tracking trade execution beyond 30 trades to increase statistical sample sizes for sequence and overtrading analysis.",
+        "Maintain the current risk-reward discipline on GBPUSD Friday trades, given the overall profit factor of 2.78 and win rate of 63.33%.",
+        "Monitor post-win risk management to ensure higher average losses after winning trades (9.52) do not impair long-term profitability."
+      ],
+      "limitations": [
+        "Total sample size is limited to 30 trades, categorized as MODERATE overall but SMALL or VERY_SMALL in most granular sub-groups.",
+        "Zero variance exists in trade symbol, direction, day of week, position volume, and holding time, preventing comparative analysis across differing conditions.",
+        "Sequence sub-categories trade_1, trade_2, trade_3, and consecutive_losses_3_plus have sample sizes of 1, rendering them statistically insufficient."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_15_GENERIC",
+    "runtime_s": 14.544167518615723,
+    "baseline_output": {
+      "overall_summary": "The trader generated a slight positive net PnL of 17.01 across 30 total trades with a 56.67% win rate and a profit factor of 1.12. All trades were executed as BUY orders on GBPUSD on Fridays with identical lot sizes (1.0) and holding times between 15 minutes and 1 hour. A primary behavioral risk is severe performance degradation following winning trades, alongside heavy reliance on high trade frequency (trade 4+).",
+      "findings": [
+        {
+          "finding_id": "FND-1",
+          "claim": "Performance declines significantly following winning trades compared to losing trades.",
+          "category": "None",
+          "evidence": "Trades executed after a win (16 trades) produced a net PnL of -50.74, win rate of 43.75%, profit factor of 0.56, and average loss of 12.91. Conversely, trades after a loss (13 trades) produced a net PnL of 72.66, win rate of 76.92%, profit factor of 4.65, and average loss of 6.64.",
+          "sample_size": 16,
+          "confidence": "Medium",
+          "reasoning": "The contrast between post-win (-50.74 PnL) and post-loss (+72.66 PnL) performance suggests potential complacency or overconfidence after wins, leading to wider average losses ($12.91 vs $6.64) and lower win rate."
+        },
+        {
+          "finding_id": "FND-2",
+          "claim": "The vast majority of activity occurs deep into trading sessions (trade 4+), yielding low risk-adjusted returns.",
+          "category": "Overtrading",
+          "evidence": "27 out of 30 total trades fall under the trade_4_plus category, yielding a net PnL of 10.42, profit factor of 1.08, and maximum drawdown of 45.07.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "High trade concentration in late trade sequences (trade 4+) accounts for 90% of all activity but yields a narrow profit factor of 1.08 while exposing the account to a maximum drawdown of 45.07."
+        },
+        {
+          "finding_id": "FND-3",
+          "claim": "Trading activity is strictly limited to a single asset, side, weekday, holding duration, and position size.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30 of 30) were BUY orders on GBPUSD on Friday, held between 15 minutes and 1 hour, with a volume of exactly 1.0 lot.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "All 30 trades reflect identical environmental parameters (GBPUSD, BUY, Friday, 15m-1h holding time, 1.0 lot volume), confirming uniform execution conditions."
+        }
+      ],
+      "recommendations": [
+        "Implement rules to manage risk exposure immediately following winning trades, such as strict loss limits or mandatory cooling-off periods.",
+        "Evaluate whether continuing to trade past 3 trades in a session is adding adequate risk-adjusted value given the high drawdown (45.07) relative to net PnL (10.42).",
+        "Maintain risk management controls to keep average losses on post-win trades comparable to post-loss trades."
+      ],
+      "limitations": [
+        "Total sample size of 30 trades is moderate, and sub-group sample sizes (16 post-win, 13 post-loss) are small, limiting statistical certainty.",
+        "Data lacks variation across instruments, trade directions, days of the week, and position sizes, preventing multi-asset or regime comparison."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_15_NO_PATTERN",
+    "runtime_s": 21.340173959732056,
+    "baseline_output": {
+      "overall_summary": "The trader executed 60 trades exclusively as BUY orders on GBPUSD (35 trades) and EURUSD (25 trades), holding all positions between 15 minutes and 1 hour with uniform volume sizing (1.0 lot). The overall win rate is 51.67% with a net PnL of 100.0 and a profit factor of 1.07. Performance was heavily influenced by day-of-week timing, with Monday generating all positive PnL (200.0 PnL, 58.33% win rate) while Sunday trades resulted in net losses (-100.0 PnL, 42.86% win rate). Average win and average loss are strictly identical at 50.0.",
+      "findings": [
+        {
+          "finding_id": "F-01",
+          "claim": "Trading on Sunday generated negative performance compared to Monday and Tuesday.",
+          "category": "Session",
+          "evidence": "Sunday trades (14 trades) recorded a 42.86% win rate, net PnL of -100.0, and profit factor of 0.75, whereas Monday (24 trades) achieved a 58.33% win rate and 200.0 net PnL.",
+          "sample_size": 14,
+          "confidence": "Medium",
+          "reasoning": "Sunday performance significantly dragged down overall results, though the sample size of 14 trades is small, warranting moderate confidence."
+        },
+        {
+          "finding_id": "F-02",
+          "claim": "Performance across GBPUSD and EURUSD is nearly identical.",
+          "category": "Instrument",
+          "evidence": "GBPUSD (35 trades) yielded a 51.43% win rate, 50.0 net PnL, and profit factor of 1.06; EURUSD (25 trades) yielded a 52.00% win rate, 50.0 net PnL, and profit factor of 1.08.",
+          "sample_size": 60,
+          "confidence": "High",
+          "reasoning": "Both instruments have moderate sample sizes and demonstrate almost indistinguishable win rates, net PnL, and profit factors."
+        },
+        {
+          "finding_id": "F-03",
+          "claim": "The vast majority of trade volume is concentrated in trade slot 4+, which remains slightly profitable.",
+          "category": "Overtrading",
+          "evidence": "Trade 4_plus represents 51 out of 60 total trades with a 52.94% win rate, net PnL of 150.0, and profit factor of 1.12, whereas trade slots 1, 2, and 3 have only 3 trades each.",
+          "sample_size": 51,
+          "confidence": "High",
+          "reasoning": "A large sample size of 51 trades confirms that high daily trade counts (4+) maintain performance aligned with overall baseline metrics."
+        },
+        {
+          "finding_id": "F-04",
+          "claim": "Trades executed after a loss produced slightly higher profitability than trades executed after a win.",
+          "category": "None",
+          "evidence": "Trades following a loss (29 trades) had a 55.17% win rate, net PnL of 150.0, and profit factor of 1.23, compared to trades after a win (30 trades) which had a 50.00% win rate, 0.0 net PnL, and profit factor of 1.0.",
+          "sample_size": 29,
+          "confidence": "Medium",
+          "reasoning": "Moderate sample sizes show modest outperformance following a loss, but both post-loss and post-win metrics remain close to breakeven."
+        }
+      ],
+      "recommendations": [
+        "Consider pausing or re-evaluating Sunday trading strategies due to negative PnL (-100.0) and low win rate (42.86%).",
+        "Focus trading activity around Monday sessions, which produced the highest win rate (58.33%) and net PnL (200.0).",
+        "Collect additional trade data for early daily trade slots (trades 1 to 3) to properly assess intra-day timing effects, as current sample sizes (3 trades each) are insufficient."
+      ],
+      "limitations": [
+        "Small sample sizes in specific buckets, such as individual trade sequence slots 1 to 3 (3 trades each) and 2 consecutive losses (6 trades), limit statistical certainty.",
+        "Lack of directional diversity (100% BUY trades) prevents evaluation of shorting performance.",
+        "Uniform position volume (1.0 lot across all trades) precludes analysis of dynamic position sizing behaviors.",
+        "No trades were recorded for Wednesday, Thursday, Friday, or Saturday."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_16_SMALL_SAMPLE",
+    "runtime_s": 17.070430755615234,
+    "baseline_output": {
+      "overall_summary": "The analyzed trading history consists of a single winning EURUSD BUY trade yielding a net PnL of 10.0. Due to the extremely small sample size of 1 trade, the dataset is insufficient to draw statistical conclusions or identify behavioral and performance patterns.",
+      "findings": [
+        {
+          "finding_id": "FINDING_001",
+          "claim": "Initial trade on EURUSD was profitable, but data is insufficient to establish performance patterns.",
+          "category": "Instrument",
+          "evidence": "Total trades = 1, Winning trades = 1, Win rate = 100.0%, Net PnL = 10.0 on EURUSD BUY.",
+          "sample_size": 1,
+          "confidence": "Low",
+          "reasoning": "A single trade sample size is categorized as VERY_SMALL and does not provide statistical validity to evaluate strategy effectiveness, risk management, or asset-specific edge."
+        },
+        {
+          "finding_id": "FINDING_002",
+          "claim": "Insufficient data to analyze overtrading or sequence dynamics.",
+          "category": "Overtrading",
+          "evidence": "Sequence and daily trade distribution metrics contain 0 trades for subsequent trades (trade_2, trade_3, trade_4_plus) and sequence states (after_win, after_loss).",
+          "sample_size": 1,
+          "confidence": "Low",
+          "reasoning": "Without consecutive trades or subsequent trade sequences, behavioral tendencies such as revenge trading, overtrading, or performance degradation following wins/losses cannot be evaluated."
+        }
+      ],
+      "recommendations": [
+        "Execute and log a larger volume of trades adhering to your trading plan to build a statistically meaningful sample size for analysis.",
+        "Maintain complete performance data across different market conditions, sessions, and trade sequences to evaluate behavioral tendencies accurately."
+      ],
+      "limitations": [
+        "Dataset is limited to 1 trade, rendering all aggregate metrics (e.g., 100% win rate, 999.0 profit factor) statistically unreliable.",
+        "Sequence analysis, drawdowns, behavioral changes after wins/losses, and multi-symbol/session comparisons cannot be assessed."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_17_GENERIC",
+    "runtime_s": 15.35904598236084,
+    "baseline_output": {
+      "overall_summary": "The trader executed 30 trades, strictly restricted to GBPUSD BUY orders on Fridays with 1.0 lot volume and holding times between 15 minutes to 1 hour. The strategy generated an overall net PnL of -32.18 with a 46.67% win rate, a profit factor of 0.80, and a max drawdown of 75.94. Performance degraded significantly during higher trade frequency sessions (trades 4+) and following losing trades, though sample sizes for specific sub-categories remain small to moderate.",
+      "findings": [
+        {
+          "finding_id": "F1",
+          "claim": "Trading performance degrades severely when taking 4 or more trades in a single sequence/session.",
+          "category": "Overtrading",
+          "evidence": "Trades 1, 2, and 3 each generated 100% win rates with total PnL of +38.56 across 3 trades, whereas trade_4_plus comprised 27 trades resulting in a win rate of 40.74%, net PnL of -70.74, profit factor of 0.56, and max drawdown of 75.94.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "While trade_4_plus has a moderate sample size of 27 trades demonstrating clear underperformance, trades 1 through 3 have a sample size of only 1 each, requiring caution when comparing early-trade success against late-trade failure."
+        },
+        {
+          "finding_id": "F2",
+          "claim": "Win rate and profitability drop significantly after experiencing a losing trade.",
+          "category": "None",
+          "evidence": "Trades taken 'after_loss' achieved a 37.5% win rate, net PnL of -47.15, and profit factor of 0.55 across 16 trades, compared to 'after_win' trades which achieved a 53.85% win rate, net PnL of -2.89, and profit factor of 0.95 across 13 trades.",
+          "sample_size": 16,
+          "confidence": "Low",
+          "reasoning": "Although performance after a loss shows worse net returns and lower win rates, the sample size of 16 trades after a loss (and 13 after a win) is small, making it insufficient to conclusively prove tilt or systemic behavioral bias."
+        },
+        {
+          "finding_id": "F3",
+          "claim": "Trading history exhibits zero variation in symbol, direction, day of the week, holding time, or position size.",
+          "category": "Instrument",
+          "evidence": "All 30 trades were executed on GBPUSD, BUY direction, on Friday, with holding times of 15 minutes to 1 hour, and position volume of 1.0 lot.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "The provided metrics show complete consistency (100% of 30 trades) across instrument, direction, execution day, duration bucket, and position volume."
+        }
+      ],
+      "recommendations": [
+        "Cap the number of trades per session at 3 trades to prevent overtrading losses observed in trades 4 and beyond.",
+        "Implement a cooling-off rule after a losing trade to mitigate sequential losses given the lower profit factor (0.55) observed after losses.",
+        "Test the execution strategy across additional trading days, market directions (SELLs), and assets to evaluate broader strategy robustness."
+      ],
+      "limitations": [
+        "Overall dataset size is moderate (30 trades), limiting the statistical robustness of the overall analysis.",
+        "Sub-group sample sizes for sequence analyses (e.g., consecutive_losses_3_plus with N=4) and early trade slots (trade_1 to trade_3 with N=1 each) are very small and prone to noise.",
+        "Lack of variation in trade direction, asset class, session days, and position sizes prevents evaluating behavior across diverse market regimes."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_18_GENERIC",
+    "runtime_s": 18.337002754211426,
+    "baseline_output": {
+      "overall_summary": "The trader executed 30 total trades with a 40.0% win rate, resulting in a net PnL of -18.36, a profit factor of 0.87, and a maximum drawdown of 67.2%. Trading activity is entirely concentrated on GBPUSD BUY positions held for 15 minutes to 1 hour on Fridays. Overtrading is prominent, with 27 out of 30 trades occurring on the 4th trade of the day or later.",
+      "findings": [
+        {
+          "finding_id": "FINDING_1",
+          "claim": "Severe trade concentration in late intra-day trade sequences (trade 4+) dominates performance.",
+          "category": "Overtrading",
+          "evidence": "27 out of 30 total trades occurred in the trade_4_plus category, yielding a win rate of 40.74%, net PnL of -2.57, and maximum drawdown of 67.2%.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "90% of all trades were taken as the 4th trade or beyond in a single day, showing clear intra-day overtrading behavior that accounts for the maximum drawdown of the system."
+        },
+        {
+          "finding_id": "FINDING_2",
+          "claim": "Trading strategy is non-diversified and unprofitable across all executed parameters.",
+          "category": "Instrument",
+          "evidence": "All 30 trades (100%) were executed on GBPUSD, in the BUY direction, on Fridays, with holding times between 15 minutes and 1 hour, resulting in a net PnL of -18.36 and a win rate of 40.0%.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "Total concentration on a single pair, direction, day, and duration allows direct evaluation of this specific setup, which currently yields a profit factor of 0.87."
+        },
+        {
+          "finding_id": "FINDING_3",
+          "claim": "Trading performance drops significantly after 2 consecutive losses, though sample size is severely constrained.",
+          "category": "None",
+          "evidence": "At 2 consecutive losses, win rate drops to 25.0%, net PnL falls to -22.95, and profit factor decreases to 0.06.",
+          "sample_size": 4,
+          "confidence": "Low",
+          "reasoning": "Although performance degrades heavily following 2 consecutive losses, the sample size of 4 trades is very small, rendering the evidence insufficient to firmly establish a behavioral pattern."
+        }
+      ],
+      "recommendations": [
+        "Reduce daily trade frequency by establishing trade limits to prevent overtrading past 3 trades per day.",
+        "Evaluate system parameters or stop trading GBPUSD BUY positions on Fridays until positive edge is demonstrated.",
+        "Gather a larger sample size of trades before relying on sequence-based performance adjustments."
+      ],
+      "limitations": [
+        "Total trade history is limited to 30 trades (MODERATE sample size overall), restricting statistical significance.",
+        "Sequence metrics (consecutive losses) rely on VERY SMALL sample sizes (4 to 7 trades), making conclusions tentative.",
+        "Lack of variation in symbol, direction, day of week, and volume prevents comparative testing across different market conditions."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_19_GENERIC",
+    "runtime_s": 20.52435851097107,
+    "baseline_output": {
+      "overall_summary": "The analyzed trading history consists of 30 trades, all executed as GBPUSD long (BUY) positions held between 15 minutes and 1 hour on Fridays with a static volume of 1.0 unit. Overall performance is negative with a net PnL of -41.82, a win rate of 43.33%, a profit factor of 0.76, and a maximum drawdown of 80.11%. The primary performance drag stems from high daily execution frequency (4+ trades per day), which accounts for 27 of the 30 trades and -50.52 of net PnL.",
+      "findings": [
+        {
+          "finding_id": "FIND-01",
+          "claim": "High daily trade frequency (4+ trades per day) is responsible for the overall strategy unprofitability and peak drawdown.",
+          "category": "Overtrading",
+          "evidence": "Trades executed at daily sequence 'trade_4_plus' account for 27 out of 30 total trades, accumulating a net PnL of -50.52, a profit factor of 0.70, and a maximum drawdown of 80.11%. In contrast, trades 1 through 3 combined generated a net PnL of +8.69 across 3 trades.",
+          "sample_size": 27,
+          "confidence": "Medium",
+          "reasoning": "A sample size of 27 trades categorized as MODERATE indicates a noticeable pattern where persistent execution beyond 3 trades per day degrades overall performance."
+        },
+        {
+          "finding_id": "FIND-02",
+          "claim": "Trading activity is fully concentrated in a single asset, side, session day, and duration bucket.",
+          "category": "Instrument",
+          "evidence": "100% of trades (30 of 30) were BUY positions on GBPUSD on Friday with holding times of 15 minutes - 1 hour, yielding a net PnL of -41.82 and a win rate of 43.33%.",
+          "sample_size": 30,
+          "confidence": "High",
+          "reasoning": "All trades in the dataset fall under these identical parameters, establishing a consistent MODERATE baseline for this specific context."
+        },
+        {
+          "finding_id": "FIND-03",
+          "claim": "Performance drops significantly on trades taken immediately following a winning trade.",
+          "category": "None",
+          "evidence": "Trades taken 'after_win' produced a net PnL of -32.76, win rate of 41.67%, and profit factor of 0.58 (12 trades), whereas trades taken 'after_loss' generated a net PnL of -8.0, win rate of 47.06%, and profit factor of 0.92 (17 trades).",
+          "sample_size": 12,
+          "confidence": "Low",
+          "reasoning": "Although the PnL degradation after wins is substantial (-32.76 vs -8.0), the SMALL sample size of 12 trades limits statistical certainty."
+        }
+      ],
+      "recommendations": [
+        "Cap daily execution volume to 3 trades maximum to eliminate the sustained losses observed in the 4+ daily trade regime.",
+        "Re-evaluate the entry logic for Friday GBPUSD long positions held under 1 hour due to the overall net negative expectancy (0.76 profit factor).",
+        "Collect additional trade data before making major strategy overhauls based on sequential behavioral outcomes like post-win performance."
+      ],
+      "limitations": [
+        "The overall dataset is constrained to a MODERATE sample size of 30 trades.",
+        "Sequential metrics (after win, after loss, consecutive losses) rely on SMALL or VERY_SMALL sample sizes (4 to 17 trades), rendering sequence findings inconclusive.",
+        "No comparison data exists for SHORT positions, non-Friday sessions, or alternate holding durations."
+      ]
+    }
+  },
+  {
+    "case_id": "CASE_20_GENERIC",
+    "runtime_s": 0.26725125312805176,
+    "baseline_output": {
+      "error": "API_ERROR: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 23.472316927s. [links {\n  description: \"Learn more about Gemini API quotas\"\n  url: \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n}\n, violations {\n  quota_metric: \"generativelanguage.googleapis.com/generate_content_free_tier_requests\"\n  quota_id: \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\"\n  quota_dimensions {\n    key: \"model\"\n    value: \"gemini-3.6-flash\"\n  }\n  quota_dimensions {\n    key: \"location\"\n    value: \"global\"\n  }\n  quota_value: 20\n}\n, retry_delay {\n  seconds: 23\n}\n]"
+    }
+  }
+]

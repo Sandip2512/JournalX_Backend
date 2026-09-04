@@ -1,0 +1,23 @@
+{
+  "case_id": "CASE_16_SMALL_SAMPLE",
+  "description": "Only 1 trade.",
+  "ground_truth": {
+    "expected_detection": "NO",
+    "expected_category": "None",
+    "expected_direction": "None"
+  },
+  "trades": [
+    {
+      "trade_no": 1,
+      "symbol": "EURUSD",
+      "volume": 1.0,
+      "type": "BUY",
+      "price_open": 1.0,
+      "price_close": 1.1,
+      "net_profit": 10.0,
+      "open_time": "2026-08-28T18:08:03.058775+00:00",
+      "close_time": "2026-08-28T18:38:03.058775+00:00",
+      "holding_time_minutes": 30
+    }
+  ]
+}
